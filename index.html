@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QuantGEX Terminal | Opções & Gamma</title>
+    <title>QuantGEX Terminal | Opções & Gamma Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- SheetJS para processar Excel -->
@@ -15,7 +15,7 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         body {
-            background-color: #0f172a;
+            background-color: #020617;
             color: #f1f5f9;
         }
         input[type="file"]::file-selector-button {
@@ -28,15 +28,17 @@
             margin-right: 1rem;
             transition: background 0.2s;
         }
-        input[type="file"]::file-selector-button:hover {
-            background-color: #1d4ed8;
-        }
         .pin-label {
             background: #a855f7;
             color: white;
             padding: 2px 6px;
             border-radius: 4px;
             font-size: 0.7rem;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+            width: 100%;
         }
     </style>
 </head>
@@ -45,96 +47,121 @@
         <!-- Header -->
         <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-                <h1 class="text-3xl font-bold text-blue-400">📊 QuantGEX Terminal</h1>
-                <p class="text-slate-400">Análise de Microestrutura e Magnetismo de Preço</p>
+                <h1 class="text-3xl font-bold text-blue-400">📊 QuantGEX Terminal <span class="text-sm font-normal text-slate-500">v2.0 Pro</span></h1>
+                <p class="text-slate-400">Microestrutura, Fluxo de Opções e Delta Hedging</p>
             </div>
             <div class="flex gap-4">
                 <div class="glass-card p-3 rounded-lg text-center min-w-[150px]">
-                    <span class="block text-xs uppercase text-slate-400">Spot Price Atual</span>
+                    <span class="block text-xs uppercase text-slate-400">Spot Price</span>
                     <input type="number" id="spotPrice" value="100.00" step="0.01" class="bg-transparent text-xl font-bold w-full text-center outline-none text-white">
                 </div>
             </div>
         </header>
 
         <!-- Import Section -->
-        <div class="glass-card p-6 rounded-xl mb-8">
-            <h2 class="text-lg font-semibold mb-4 text-blue-300">📁 Importar Cadeia de Opções</h2>
-            <div class="flex flex-col md:flex-row items-center gap-4">
-                <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-slate-400">
-                <p class="text-xs text-slate-500 whitespace-nowrap">
-                    Colunas: <span class="text-slate-300">ticker, tipo, strike, OI, Gamma</span>
-                </p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="md:col-span-2 glass-card p-6 rounded-xl">
+                <h2 class="text-sm font-semibold mb-4 text-blue-300 uppercase tracking-wider">📁 Importar Cadeia de Opções</h2>
+                <div class="flex flex-col md:flex-row items-center gap-4">
+                    <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-slate-400">
+                    <p class="text-[10px] text-slate-500 leading-tight">
+                        Formato: <span class="text-slate-300">ticker, tipo, strike, OI, Gamma</span>
+                    </p>
+                </div>
+            </div>
+            <div class="glass-card p-6 rounded-xl flex flex-col justify-center">
+                <span class="text-xs text-slate-400 uppercase">Delta Hedging Est. (1%)</span>
+                <div id="deltaHedgeVal" class="text-xl font-bold text-blue-400">--</div>
+                <p class="text-[10px] text-slate-500">Fluxo necessário de MMs por movimento de 1% no Spot</p>
             </div>
         </div>
 
         <!-- Main Dashboard -->
         <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-            <!-- KPIs -->
-            <div class="glass-card p-5 rounded-xl border-l-4 border-blue-500">
+            <div class="glass-card p-5 rounded-xl border-t-4 border-blue-500">
                 <span class="text-xs text-slate-400 uppercase">Net GEX Agregado</span>
                 <div id="netGexValue" class="text-xl font-bold text-white">--</div>
                 <div id="regimeBadge" class="mt-1 inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase">...</div>
             </div>
-            <div class="glass-card p-5 rounded-xl border-l-4 border-green-500">
-                <span class="text-xs text-slate-400 uppercase">Call Wall</span>
+            <div class="glass-card p-5 rounded-xl border-t-4 border-green-500">
+                <span class="text-xs text-slate-400 uppercase">Call Wall (Resistance)</span>
                 <div id="callWallValue" class="text-xl font-bold text-white">--</div>
-                <span class="text-[10px] text-slate-500 italic">Teto de Gamma</span>
+                <span id="callWallOi" class="text-[10px] text-slate-500">--</span>
             </div>
-            <div class="glass-card p-5 rounded-xl border-l-4 border-red-500">
-                <span class="text-xs text-slate-400 uppercase">Put Wall</span>
+            <div class="glass-card p-5 rounded-xl border-t-4 border-red-500">
+                <span class="text-xs text-slate-400 uppercase">Put Wall (Support)</span>
                 <div id="putWallValue" class="text-xl font-bold text-white">--</div>
-                <span class="text-[10px] text-slate-500 italic">Chão de Gamma</span>
+                <span id="putWallOi" class="text-[10px] text-slate-500">--</span>
             </div>
-            <div class="glass-card p-5 rounded-xl border-l-4 border-orange-500">
-                <span class="text-xs text-slate-400 uppercase">Gamma Flip</span>
+            <div class="glass-card p-5 rounded-xl border-t-4 border-orange-500">
+                <span class="text-xs text-slate-400 uppercase">Gamma Flip (Pivot)</span>
                 <div id="gammaFlipValue" class="text-xl font-bold text-white">--</div>
-                <span class="text-[10px] text-slate-500 italic">Inflexão Vol</span>
+                <span class="text-[10px] text-slate-500 italic">Vara de Volatilidade</span>
             </div>
-            <div class="glass-card p-5 rounded-xl border-l-4 border-purple-500">
-                <span class="text-xs text-slate-400 uppercase text-purple-400">Gamma Pin 🧲</span>
+            <div class="glass-card p-5 rounded-xl border-t-4 border-purple-500">
+                <span class="text-xs text-slate-400 uppercase">Gamma Pin 🧲</span>
                 <div id="gammaPinValue" class="text-xl font-bold text-white">--</div>
-                <span class="text-[10px] text-slate-500 italic">Ponto Magnético</span>
+                <span class="text-[10px] text-slate-500 italic">Atração de Vencimento</span>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Gráfico -->
             <div class="lg:col-span-2 glass-card p-6 rounded-xl">
-                <h3 class="text-lg font-semibold mb-4 text-slate-200 text-center">Curva de Gamma Agregada (Magnetismo vs Inflexão)</h3>
-                <canvas id="gexChart" height="150"></canvas>
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-sm font-semibold text-slate-200 uppercase tracking-widest">Exposição Líquida de Gamma por Strike</h3>
+                    <div class="flex gap-2">
+                        <span class="flex items-center gap-1 text-[10px] text-slate-400"><span class="w-2 h-2 bg-green-500 rounded-full"></span> Pos GEX</span>
+                        <span class="flex items-center gap-1 text-[10px] text-slate-400"><span class="w-2 h-2 bg-red-500 rounded-full"></span> Neg GEX</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="gexChart"></canvas>
+                </div>
             </div>
 
             <!-- Estratégias -->
             <div class="glass-card p-6 rounded-xl">
                 <h3 class="text-lg font-semibold mb-4 text-slate-200 flex items-center gap-2">
-                    🎯 Inteligência Operacional
+                    🧠 Quant Insights
                 </h3>
                 <div id="strategyContent" class="space-y-4">
-                    <p class="text-slate-500 italic text-sm text-center py-10">Aguardando dados para análise quantitativa...</p>
+                    <div class="animate-pulse flex space-y-4 flex-col">
+                        <div class="h-4 bg-slate-800 rounded w-3/4"></div>
+                        <div class="h-10 bg-slate-800 rounded"></div>
+                        <div class="h-20 bg-slate-800 rounded"></div>
+                    </div>
+                </div>
+                <div class="mt-6 pt-4 border-t border-white/5">
+                    <h4 class="text-xs font-bold text-blue-400 mb-2 uppercase">Dicionário de Risco:</h4>
+                    <ul class="text-[10px] text-slate-500 space-y-1">
+                        <li>• <strong>GEX Positivo:</strong> MMs compram quedas e vendem altas (Baixa Vol).</li>
+                        <li>• <strong>GEX Negativo:</strong> MMs vendem quedas e compram altas (Alta Vol).</li>
+                        <li>• <strong>Vanna:</strong> Sensibilidade da posição à mudança de Vol implícita.</li>
+                    </ul>
                 </div>
             </div>
         </div>
 
         <!-- Tabela -->
         <div class="mt-8 glass-card rounded-xl overflow-hidden">
-            <div class="p-4 border-b border-white/10 flex justify-between items-center">
-                <h3 class="font-semibold">Detalhamento por Strike</h3>
-                <span class="text-xs text-slate-500">*GEX calculado como Gamma * OI * 100 * Spot</span>
+            <div class="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
+                <h3 class="font-semibold text-sm">GEX & Liquidez por Nível</h3>
+                <button onclick="exportData()" class="text-[10px] bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded transition">Exportar Análise</button>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
-                    <thead class="bg-white/5 text-slate-300">
+                    <thead class="bg-black/20 text-slate-400 text-[10px] uppercase">
                         <tr>
-                            <th class="p-4">Ticker</th>
                             <th class="p-4">Strike</th>
+                            <th class="p-4">Nocional Líquido</th>
                             <th class="p-4">OI Total</th>
-                            <th class="p-4">GEX Call</th>
-                            <th class="p-4">GEX Put</th>
-                            <th class="p-4">GEX Net</th>
+                            <th class="p-4">Dominância</th>
+                            <th class="p-4">Risco MM</th>
                         </tr>
                     </thead>
-                    <tbody id="dataTable" class="divide-y divide-white/5">
-                        <tr><td colspan="6" class="p-8 text-center text-slate-500">Importe o Excel para popular a tabela</td></tr>
+                    <tbody id="dataTable" class="divide-y divide-white/5 font-mono text-xs">
+                        <tr><td colspan="5" class="p-8 text-center text-slate-500 italic">Importe dados para iniciar a análise quantitativa</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -162,7 +189,7 @@
 
         function processImportedData(json) {
             lastRawData = json.map(row => ({
-                ticker: row.ticker || row.Ticker,
+                ticker: row.ticker || row.Ticker || "ASSET",
                 tipo: (row.tipo || row.Tipo || "").toLowerCase(),
                 strike: parseFloat(row.strike || row.Strike),
                 oi: parseFloat(row.OI || row.oi || row.open_interest),
@@ -171,12 +198,15 @@
             updateData();
         }
 
-        // --- ENGINE ---
+        // --- QUANT ENGINE ---
         function calculateGEX(data, spot) {
             const strikeMap = {};
             data.forEach(row => {
                 if (!strikeMap[row.strike]) strikeMap[row.strike] = { strike: row.strike, gexCall: 0, gexPut: 0, oi: 0, ticker: row.ticker };
+                
+                // Cálculo de GEX Nocional
                 const gexVal = row.gamma * row.oi * 100 * spot;
+                
                 if (row.tipo === 'call' || row.tipo === 'c') {
                     strikeMap[row.strike].gexCall += gexVal;
                 } else {
@@ -184,63 +214,91 @@
                 }
                 strikeMap[row.strike].oi += row.oi;
             });
-            return Object.values(strikeMap).map(s => ({ ...s, totalGex: s.gexCall + s.gexPut })).sort((a,b) => a.strike - b.strike);
+
+            return Object.values(strikeMap).map(s => ({ 
+                ...s, 
+                totalGex: s.gexCall + s.gexPut,
+                dominance: s.gexCall > Math.abs(s.gexPut) ? 'CALL' : 'PUT'
+            })).sort((a,b) => a.strike - b.strike);
         }
 
         function getLevels(df) {
-            // Gamma Pin: Strike com maior gamma absoluto total (Call + Put combinados sem sinal)
+            const callWallRow = df.reduce((prev, curr) => (curr.gexCall > prev.gexCall) ? curr : prev);
+            const putWallRow = df.reduce((prev, curr) => (curr.gexPut < prev.gexPut) ? curr : prev);
+            
             const gammaPin = df.reduce((prev, curr) => 
                 (Math.abs(curr.gexCall) + Math.abs(curr.gexPut) > Math.abs(prev.gexCall) + Math.abs(prev.gexPut)) ? curr : prev
             ).strike;
 
-            const callWall = df.reduce((prev, curr) => (curr.gexCall > prev.gexCall) ? curr : prev).strike;
-            const putWall = df.reduce((prev, curr) => (curr.gexPut < prev.gexPut) ? curr : prev).strike;
             const gammaFlip = df.reduce((prev, curr) => (Math.abs(curr.totalGex) < Math.abs(prev.totalGex)) ? curr : prev).strike;
             const netGex = df.reduce((sum, curr) => sum + curr.totalGex, 0);
 
-            return { callWall, putWall, gammaPin, gammaFlip, netGex };
+            return { 
+                callWall: callWallRow.strike, 
+                callWallOi: callWallRow.oi,
+                putWall: putWallRow.strike, 
+                putWallOi: putWallRow.oi,
+                gammaPin, 
+                gammaFlip, 
+                netGex 
+            };
         }
 
         function updateUI(df, levels, spot) {
             document.getElementById('netGexValue').innerText = `R$ ${levels.netGex.toLocaleString('pt-BR', {maximumFractionDigits: 0})}`;
             document.getElementById('callWallValue').innerText = `$ ${levels.callWall.toFixed(2)}`;
+            document.getElementById('callWallOi').innerText = `OI: ${levels.callWallOi.toLocaleString()}`;
             document.getElementById('putWallValue').innerText = `$ ${levels.putWall.toFixed(2)}`;
+            document.getElementById('putWallOi').innerText = `OI: ${levels.putWallOi.toLocaleString()}`;
             document.getElementById('gammaFlipValue').innerText = `$ ${levels.gammaFlip.toFixed(2)}`;
             document.getElementById('gammaPinValue').innerText = `$ ${levels.gammaPin.toFixed(2)}`;
 
+            // Delta Hedging Estimate
+            const deltaHedge = (levels.netGex * 0.01) / spot;
+            document.getElementById('deltaHedgeVal').innerText = `R$ ${deltaHedge.toLocaleString('pt-BR', {maximumFractionDigits: 0})}`;
+
             const isPos = levels.netGex > 0;
             const badge = document.getElementById('regimeBadge');
-            badge.innerText = isPos ? 'Positive Gamma' : 'Negative Gamma';
+            badge.innerText = isPos ? 'Gamma Longo (Estável)' : 'Gamma Curto (Instável)';
             badge.className = `mt-1 inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${isPos ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`;
 
-            // Strategy logic
-            let stratHtml = `<div class="p-4 rounded-lg bg-slate-800/50 border border-white/10 text-sm">`;
+            // Advanced Insights
+            let stratHtml = `<div class="space-y-3">`;
             
-            if (Math.abs(spot - levels.gammaPin) / spot < 0.015) {
-                stratHtml += `<p class="text-purple-400 font-bold mb-2">🧲 ALERTA DE PINNING:</p>
-                <p>O preço está muito próximo ao strike $${levels.gammaPin}. Espere compressão de volatilidade e atração para este nível até o vencimento.</p>`;
-            } else if (isPos) {
-                stratHtml += `<p class="text-green-400 font-bold mb-2">🟢 AMBIENTE CALMO:</p>
-                <p>MMs agem como amortecedores. Estratégias de venda de prêmio e reversão à média entre $${levels.putWall} e $${levels.callWall} são favorecidas.</p>`;
+            if (!isPos) {
+                stratHtml += `<div class="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+                    <p class="text-red-400 font-bold text-xs uppercase mb-1">⚠️ Alerta de Aceleração</p>
+                    <p class="text-[11px]">Mercado em Short Gamma. Movimentos de preço serão amplificados pelo Delta Hedging dos MMs. O suporte em $${levels.putWall} é crítico.</p>
+                </div>`;
             } else {
-                stratHtml += `<p class="text-red-400 font-bold mb-2">🔴 AMBIENTE VOLÁTIL:</p>
-                <p>MMs aceleram o movimento. Abaixo do Flip ($${levels.gammaFlip}), espere movimentos direcionais violentos e expansão de range.</p>`;
+                stratHtml += `<div class="p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                    <p class="text-green-400 font-bold text-xs uppercase mb-1">🛡️ Amortecimento Ativo</p>
+                    <p class="text-[11px]">MMs estão contra-tendência. Quedas tendem a encontrar compradores passivos. Ponto de equilíbrio ideal em $${levels.gammaPin}.</p>
+                </div>`;
             }
-            stratHtml += `</div>`;
+
+            const distToFlip = ((spot - levels.gammaFlip) / spot) * 100;
+            stratHtml += `<div class="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                <p class="text-blue-400 font-bold text-xs uppercase mb-1">📍 Proximidade do Flip</p>
+                <p class="text-[11px]">O preço está a ${distToFlip.toFixed(2)}% do Gamma Flip. Cruzar este nível altera completamente a dinâmica de volatilidade do ativo.</p>
+            </div></div>`;
+            
             document.getElementById('strategyContent').innerHTML = stratHtml;
 
             // Table update
             document.getElementById('dataTable').innerHTML = df.map(row => `
-                <tr class="hover:bg-white/5 transition ${row.strike === levels.gammaPin ? 'bg-purple-500/5' : ''}">
-                    <td class="p-4 text-slate-500">${row.ticker}</td>
-                    <td class="p-4 font-mono font-bold flex items-center gap-2">
+                <tr class="hover:bg-white/5 transition ${row.strike === levels.gammaPin ? 'bg-purple-500/10' : ''}">
+                    <td class="p-4 font-bold flex items-center gap-2">
                         ${row.strike.toFixed(2)}
                         ${row.strike === levels.gammaPin ? '<span class="pin-label">PIN</span>' : ''}
+                        ${row.strike === levels.gammaFlip ? '<span class="bg-orange-500 text-white px-1 rounded text-[8px]">FLIP</span>' : ''}
                     </td>
-                    <td class="p-4">${row.oi.toLocaleString()}</td>
-                    <td class="p-4 text-green-400/70">${row.gexCall.toLocaleString('pt-BR', {maximumFractionDigits:0})}</td>
-                    <td class="p-4 text-red-400/70">${row.gexPut.toLocaleString('pt-BR', {maximumFractionDigits:0})}</td>
-                    <td class="p-4 font-bold ${row.totalGex >= 0 ? 'text-green-400' : 'text-red-400'}">${row.totalGex.toLocaleString('pt-BR', {maximumFractionDigits:0})}</td>
+                    <td class="p-4 ${row.totalGex >= 0 ? 'text-green-400' : 'text-red-400'}">
+                        ${row.totalGex.toLocaleString('pt-BR', {maximumFractionDigits:0})}
+                    </td>
+                    <td class="p-4 text-slate-400">${row.oi.toLocaleString()}</td>
+                    <td class="p-4"><span class="px-2 py-0.5 rounded-full bg-slate-800 text-[9px]">${row.dominance}</span></td>
+                    <td class="p-4 text-slate-500 italic">${row.totalGex > 0 ? 'Hedge Passivo' : 'Hedge Agressivo'}</td>
                 </tr>
             `).join('');
 
@@ -254,26 +312,36 @@
             chartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: df.map(r => r.strike.toFixed(2)),
+                    labels: df.map(r => r.strike),
                     datasets: [{
-                        label: 'GEX Net Agregado',
+                        label: 'GEX Net',
                         data: df.map(r => r.totalGex),
-                        backgroundColor: df.map(r => {
-                            if (r.strike === levels.gammaPin) return '#a855f7';
-                            return r.totalGex >= 0 ? 'rgba(16, 185, 129, 0.6)' : 'rgba(239, 68, 68, 0.6)';
-                        }),
-                        borderColor: df.map(r => r.strike === levels.gammaPin ? '#d8b4fe' : 'transparent'),
-                        borderWidth: 2
+                        backgroundColor: df.map(r => r.totalGex >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
+                        borderRadius: 4,
                     }]
                 },
                 options: {
+                    maintainAspectRatio: false,
                     responsive: true,
                     scales: {
-                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
-                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
+                        x: { 
+                            grid: { display: false }, 
+                            ticks: { color: '#64748b', font: { size: 10 } } 
+                        },
+                        y: { 
+                            grid: { color: 'rgba(255,255,255,0.05)' }, 
+                            ticks: { color: '#64748b', font: { size: 10 } } 
+                        }
                     },
                     plugins: {
-                        legend: { display: false }
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1e293b',
+                            titleColor: '#60a5fa',
+                            callbacks: {
+                                label: (ctx) => `GEX: R$ ${ctx.raw.toLocaleString('pt-BR')}`
+                            }
+                        }
                     }
                 }
             });
