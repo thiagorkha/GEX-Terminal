@@ -31,6 +31,13 @@
         input[type="file"]::file-selector-button:hover {
             background-color: #1d4ed8;
         }
+        .pin-label {
+            background: #a855f7;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -39,7 +46,7 @@
         <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-3xl font-bold text-blue-400">📊 QuantGEX Terminal</h1>
-                <p class="text-slate-400">Importação de Dados de Opções via Excel</p>
+                <p class="text-slate-400">Análise de Microestrutura e Magnetismo de Preço</p>
             </div>
             <div class="flex gap-4">
                 <div class="glass-card p-3 rounded-lg text-center min-w-[150px]">
@@ -55,58 +62,64 @@
             <div class="flex flex-col md:flex-row items-center gap-4">
                 <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-slate-400">
                 <p class="text-xs text-slate-500 whitespace-nowrap">
-                    Colunas obrigatórias: <span class="text-slate-300">ticker, tipo, strike, OI, Gamma</span>
+                    Colunas: <span class="text-slate-300">ticker, tipo, strike, OI, Gamma</span>
                 </p>
             </div>
         </div>
 
         <!-- Main Dashboard -->
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
             <!-- KPIs -->
-            <div class="glass-card p-6 rounded-xl border-l-4 border-blue-500">
-                <span class="text-sm text-slate-400">Net GEX Agregado</span>
-                <div id="netGexValue" class="text-2xl font-bold text-white">--</div>
-                <div id="regimeBadge" class="mt-2 inline-block px-2 py-1 rounded text-xs font-bold uppercase">Aguardando...</div>
+            <div class="glass-card p-5 rounded-xl border-l-4 border-blue-500">
+                <span class="text-xs text-slate-400 uppercase">Net GEX Agregado</span>
+                <div id="netGexValue" class="text-xl font-bold text-white">--</div>
+                <div id="regimeBadge" class="mt-1 inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase">...</div>
             </div>
-            <div class="glass-card p-6 rounded-xl border-l-4 border-green-500">
-                <span class="text-sm text-slate-400">Call Wall</span>
-                <div id="callWallValue" class="text-2xl font-bold text-white">--</div>
-                <span class="text-xs text-slate-400">Maior Resistência</span>
+            <div class="glass-card p-5 rounded-xl border-l-4 border-green-500">
+                <span class="text-xs text-slate-400 uppercase">Call Wall</span>
+                <div id="callWallValue" class="text-xl font-bold text-white">--</div>
+                <span class="text-[10px] text-slate-500 italic">Teto de Gamma</span>
             </div>
-            <div class="glass-card p-6 rounded-xl border-l-4 border-red-500">
-                <span class="text-sm text-slate-400">Put Wall</span>
-                <div id="putWallValue" class="text-2xl font-bold text-white">--</div>
-                <span class="text-xs text-slate-400">Maior Suporte</span>
+            <div class="glass-card p-5 rounded-xl border-l-4 border-red-500">
+                <span class="text-xs text-slate-400 uppercase">Put Wall</span>
+                <div id="putWallValue" class="text-xl font-bold text-white">--</div>
+                <span class="text-[10px] text-slate-500 italic">Chão de Gamma</span>
             </div>
-            <div class="glass-card p-6 rounded-xl border-l-4 border-orange-500">
-                <span class="text-sm text-slate-400">Gamma Flip</span>
-                <div id="gammaFlipValue" class="text-2xl font-bold text-white">--</div>
-                <span class="text-xs text-slate-400">Inflexão de Vol</span>
+            <div class="glass-card p-5 rounded-xl border-l-4 border-orange-500">
+                <span class="text-xs text-slate-400 uppercase">Gamma Flip</span>
+                <div id="gammaFlipValue" class="text-xl font-bold text-white">--</div>
+                <span class="text-[10px] text-slate-500 italic">Inflexão Vol</span>
+            </div>
+            <div class="glass-card p-5 rounded-xl border-l-4 border-purple-500">
+                <span class="text-xs text-slate-400 uppercase text-purple-400">Gamma Pin 🧲</span>
+                <div id="gammaPinValue" class="text-xl font-bold text-white">--</div>
+                <span class="text-[10px] text-slate-500 italic">Ponto Magnético</span>
             </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Gráfico -->
             <div class="lg:col-span-2 glass-card p-6 rounded-xl">
-                <h3 class="text-lg font-semibold mb-4 text-slate-200 text-center">Perfil de Exposição Gamma por Strike</h3>
+                <h3 class="text-lg font-semibold mb-4 text-slate-200 text-center">Curva de Gamma Agregada (Magnetismo vs Inflexão)</h3>
                 <canvas id="gexChart" height="150"></canvas>
             </div>
 
             <!-- Estratégias -->
             <div class="glass-card p-6 rounded-xl">
                 <h3 class="text-lg font-semibold mb-4 text-slate-200 flex items-center gap-2">
-                    💡 Análise Estratégica
+                    🎯 Inteligência Operacional
                 </h3>
                 <div id="strategyContent" class="space-y-4">
-                    <p class="text-slate-500 italic text-sm text-center py-10">Importe um arquivo para gerar a análise.</p>
+                    <p class="text-slate-500 italic text-sm text-center py-10">Aguardando dados para análise quantitativa...</p>
                 </div>
             </div>
         </div>
 
-        <!-- Tabela de Dados -->
+        <!-- Tabela -->
         <div class="mt-8 glass-card rounded-xl overflow-hidden">
-            <div class="p-4 border-b border-white/10">
-                <h3 class="font-semibold" id="tableTitle">Dados Processados</h3>
+            <div class="p-4 border-b border-white/10 flex justify-between items-center">
+                <h3 class="font-semibold">Detalhamento por Strike</h3>
+                <span class="text-xs text-slate-500">*GEX calculado como Gamma * OI * 100 * Spot</span>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
@@ -114,16 +127,14 @@
                         <tr>
                             <th class="p-4">Ticker</th>
                             <th class="p-4">Strike</th>
-                            <th class="p-4">Tipo</th>
-                            <th class="p-4">OI</th>
-                            <th class="p-4">Gamma</th>
-                            <th class="p-4">Net GEX ($)</th>
+                            <th class="p-4">OI Total</th>
+                            <th class="p-4">GEX Call</th>
+                            <th class="p-4">GEX Put</th>
+                            <th class="p-4">GEX Net</th>
                         </tr>
                     </thead>
                     <tbody id="dataTable" class="divide-y divide-white/5">
-                        <tr>
-                            <td colspan="6" class="p-8 text-center text-slate-500">Nenhum dado importado</td>
-                        </tr>
+                        <tr><td colspan="6" class="p-8 text-center text-slate-500">Importe o Excel para popular a tabela</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -134,7 +145,7 @@
         let chartInstance = null;
         let lastRawData = [];
 
-        // --- PARSER DE EXCEL ---
+        // --- EXCEL PARSER ---
         document.getElementById('excelInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -143,122 +154,100 @@
             reader.onload = function(e) {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
-                const json = XLSX.utils.sheet_to_json(worksheet);
-
+                const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
                 processImportedData(json);
             };
             reader.readAsArrayBuffer(file);
         });
 
         function processImportedData(json) {
-            try {
-                // Mapeia e valida as colunas
-                lastRawData = json.map(row => ({
-                    ticker: row.ticker || row.Ticker,
-                    tipo: (row.tipo || row.Tipo || "").toLowerCase(),
-                    strike: parseFloat(row.strike || row.Strike),
-                    oi: parseFloat(row.OI || row.oi || row.open_interest),
-                    gamma: parseFloat(row.Gamma || row.gamma)
-                })).filter(r => !isNaN(r.strike) && !isNaN(r.oi) && !isNaN(r.gamma));
-
-                if (lastRawData.length === 0) {
-                    alert("Dados inválidos ou colunas não encontradas. Verifique se o arquivo contém: ticker, tipo, strike, OI e Gamma.");
-                    return;
-                }
-
-                updateData();
-            } catch (err) {
-                console.error(err);
-                alert("Erro ao processar arquivo Excel.");
-            }
+            lastRawData = json.map(row => ({
+                ticker: row.ticker || row.Ticker,
+                tipo: (row.tipo || row.Tipo || "").toLowerCase(),
+                strike: parseFloat(row.strike || row.Strike),
+                oi: parseFloat(row.OI || row.oi || row.open_interest),
+                gamma: parseFloat(row.Gamma || row.gamma)
+            })).filter(r => !isNaN(r.strike) && !isNaN(r.oi) && !isNaN(r.gamma));
+            updateData();
         }
 
-        // --- ENGINE QUANTITATIVA ---
+        // --- ENGINE ---
         function calculateGEX(data, spot) {
-            // Agrupar por strike para consolidar Calls e Puts do mesmo strike
             const strikeMap = {};
-
             data.forEach(row => {
-                if (!strikeMap[row.strike]) {
-                    strikeMap[row.strike] = { strike: row.strike, gexCall: 0, gexPut: 0, oiCall: 0, oiPut: 0, ticker: row.ticker };
-                }
-                
-                // GEX = Gamma * OI * 100 * Spot
-                // Calls = Positivo para MM, Puts = Negativo para MM
-                const gexValue = row.gamma * row.oi * 100 * spot;
-                
+                if (!strikeMap[row.strike]) strikeMap[row.strike] = { strike: row.strike, gexCall: 0, gexPut: 0, oi: 0, ticker: row.ticker };
+                const gexVal = row.gamma * row.oi * 100 * spot;
                 if (row.tipo === 'call' || row.tipo === 'c') {
-                    strikeMap[row.strike].gexCall += gexValue;
-                    strikeMap[row.strike].oiCall += row.oi;
-                } else if (row.tipo === 'put' || row.tipo === 'p') {
-                    strikeMap[row.strike].gexPut -= gexValue; // Negativo pois MM compra put para hedge
-                    strikeMap[row.strike].oiPut += row.oi;
+                    strikeMap[row.strike].gexCall += gexVal;
+                } else {
+                    strikeMap[row.strike].gexPut -= gexVal;
                 }
+                strikeMap[row.strike].oi += row.oi;
             });
-
-            return Object.values(strikeMap).map(s => ({
-                ...s,
-                totalGex: s.gexCall + s.gexPut
-            })).sort((a, b) => a.strike - b.strike);
+            return Object.values(strikeMap).map(s => ({ ...s, totalGex: s.gexCall + s.gexPut })).sort((a,b) => a.strike - b.strike);
         }
 
         function getLevels(df) {
-            const callWall = df.reduce((prev, curr) => (prev.gexCall > curr.gexCall) ? prev : curr).strike;
-            const putWall = df.reduce((prev, curr) => (prev.gexPut < curr.gexPut) ? prev : curr).strike;
-            const gammaPin = df.reduce((prev, curr) => (Math.abs(prev.totalGex) > Math.abs(curr.totalGex)) ? prev : curr).strike;
-            const gammaFlip = df.reduce((prev, curr) => (Math.abs(prev.totalGex) < Math.abs(curr.totalGex)) ? prev : curr).strike;
+            // Gamma Pin: Strike com maior gamma absoluto total (Call + Put combinados sem sinal)
+            const gammaPin = df.reduce((prev, curr) => 
+                (Math.abs(curr.gexCall) + Math.abs(curr.gexPut) > Math.abs(prev.gexCall) + Math.abs(prev.gexPut)) ? curr : prev
+            ).strike;
+
+            const callWall = df.reduce((prev, curr) => (curr.gexCall > prev.gexCall) ? curr : prev).strike;
+            const putWall = df.reduce((prev, curr) => (curr.gexPut < prev.gexPut) ? curr : prev).strike;
+            const gammaFlip = df.reduce((prev, curr) => (Math.abs(curr.totalGex) < Math.abs(prev.totalGex)) ? curr : prev).strike;
             const netGex = df.reduce((sum, curr) => sum + curr.totalGex, 0);
 
             return { callWall, putWall, gammaPin, gammaFlip, netGex };
         }
 
-        // --- UI & GRAFICO ---
         function updateUI(df, levels, spot) {
-            document.getElementById('netGexValue').innerText = `R$ ${levels.netGex.toLocaleString('pt-BR', {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
+            document.getElementById('netGexValue').innerText = `R$ ${levels.netGex.toLocaleString('pt-BR', {maximumFractionDigits: 0})}`;
             document.getElementById('callWallValue').innerText = `$ ${levels.callWall.toFixed(2)}`;
             document.getElementById('putWallValue').innerText = `$ ${levels.putWall.toFixed(2)}`;
             document.getElementById('gammaFlipValue').innerText = `$ ${levels.gammaFlip.toFixed(2)}`;
+            document.getElementById('gammaPinValue').innerText = `$ ${levels.gammaPin.toFixed(2)}`;
 
-            const badge = document.getElementById('regimeBadge');
             const isPos = levels.netGex > 0;
+            const badge = document.getElementById('regimeBadge');
             badge.innerText = isPos ? 'Positive Gamma' : 'Negative Gamma';
-            badge.className = `mt-2 inline-block px-2 py-1 rounded text-xs font-bold uppercase ${isPos ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`;
+            badge.className = `mt-1 inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${isPos ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`;
 
-            // Estratégias
-            const stratDiv = document.getElementById('strategyContent');
-            let html = `<div class="p-4 rounded-lg bg-slate-800/50 border border-white/10">
-                <p class="font-bold text-blue-400 mb-1">Análise de Mercado:</p>
-                <p class="text-sm">${isPos ? 'Ambiente de volatilidade reprimida. Suportes e resistências tendem a segurar o preço.' : 'Ambiente de volatilidade explosiva. Rompimentos tendem a ganhar aceleração rápida.'}</p>
-            </div>`;
+            // Strategy logic
+            let stratHtml = `<div class="p-4 rounded-lg bg-slate-800/50 border border-white/10 text-sm">`;
             
-            html += `<div class="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
-                <p class="font-bold text-emerald-400 mb-1">Estratégia Recomendada:</p>
-                <p class="text-sm font-semibold">${isPos ? 'Venda de Vol (Iron Condors). Reversão à média.' : 'Compra de Vol (Strangles). Breakout Strategy.'}</p>
-            </div>`;
+            if (Math.abs(spot - levels.gammaPin) / spot < 0.015) {
+                stratHtml += `<p class="text-purple-400 font-bold mb-2">🧲 ALERTA DE PINNING:</p>
+                <p>O preço está muito próximo ao strike $${levels.gammaPin}. Espere compressão de volatilidade e atração para este nível até o vencimento.</p>`;
+            } else if (isPos) {
+                stratHtml += `<p class="text-green-400 font-bold mb-2">🟢 AMBIENTE CALMO:</p>
+                <p>MMs agem como amortecedores. Estratégias de venda de prêmio e reversão à média entre $${levels.putWall} e $${levels.callWall} são favorecidas.</p>`;
+            } else {
+                stratHtml += `<p class="text-red-400 font-bold mb-2">🔴 AMBIENTE VOLÁTIL:</p>
+                <p>MMs aceleram o movimento. Abaixo do Flip ($${levels.gammaFlip}), espere movimentos direcionais violentos e expansão de range.</p>`;
+            }
+            stratHtml += `</div>`;
+            document.getElementById('strategyContent').innerHTML = stratHtml;
 
-            stratDiv.innerHTML = html;
-
-            // Tabela
-            const tableBody = document.getElementById('dataTable');
-            tableBody.innerHTML = df.map(row => `
-                <tr class="hover:bg-white/5 transition">
-                    <td class="p-4 text-slate-400">${row.ticker || '--'}</td>
-                    <td class="p-4 font-mono font-bold ${row.strike === levels.gammaFlip ? 'text-orange-400' : ''}">${row.strike.toFixed(2)}</td>
-                    <td class="p-4 text-xs uppercase">
-                        <span class="text-green-500">C</span> / <span class="text-red-500">P</span>
+            // Table update
+            document.getElementById('dataTable').innerHTML = df.map(row => `
+                <tr class="hover:bg-white/5 transition ${row.strike === levels.gammaPin ? 'bg-purple-500/5' : ''}">
+                    <td class="p-4 text-slate-500">${row.ticker}</td>
+                    <td class="p-4 font-mono font-bold flex items-center gap-2">
+                        ${row.strike.toFixed(2)}
+                        ${row.strike === levels.gammaPin ? '<span class="pin-label">PIN</span>' : ''}
                     </td>
-                    <td class="p-4 text-slate-400">${(row.oiCall + row.oiPut).toLocaleString()}</td>
-                    <td class="p-4 text-slate-400">${((row.gexCall + Math.abs(row.gexPut)) / (spot * 100)).toFixed(4)}</td>
-                    <td class="p-4 font-bold ${row.totalGex >= 0 ? 'text-green-400' : 'text-red-400'}">${row.totalGex.toLocaleString('pt-BR', {maximumFractionDigits: 0})}</td>
+                    <td class="p-4">${row.oi.toLocaleString()}</td>
+                    <td class="p-4 text-green-400/70">${row.gexCall.toLocaleString('pt-BR', {maximumFractionDigits:0})}</td>
+                    <td class="p-4 text-red-400/70">${row.gexPut.toLocaleString('pt-BR', {maximumFractionDigits:0})}</td>
+                    <td class="p-4 font-bold ${row.totalGex >= 0 ? 'text-green-400' : 'text-red-400'}">${row.totalGex.toLocaleString('pt-BR', {maximumFractionDigits:0})}</td>
                 </tr>
             `).join('');
 
-            renderChart(df, spot);
+            renderChart(df, spot, levels);
         }
 
-        function renderChart(df, spot) {
+        function renderChart(df, spot, levels) {
             const ctx = document.getElementById('gexChart').getContext('2d');
             if (chartInstance) chartInstance.destroy();
 
@@ -266,16 +255,22 @@
                 type: 'bar',
                 data: {
                     labels: df.map(r => r.strike.toFixed(2)),
-                    datasets: [
-                        { label: 'Exposição Gamma ($)', data: df.map(r => r.totalGex), 
-                          backgroundColor: df.map(r => r.totalGex >= 0 ? '#10b981' : '#ef4444') }
-                    ]
+                    datasets: [{
+                        label: 'GEX Net Agregado',
+                        data: df.map(r => r.totalGex),
+                        backgroundColor: df.map(r => {
+                            if (r.strike === levels.gammaPin) return '#a855f7';
+                            return r.totalGex >= 0 ? 'rgba(16, 185, 129, 0.6)' : 'rgba(239, 68, 68, 0.6)';
+                        }),
+                        borderColor: df.map(r => r.strike === levels.gammaPin ? '#d8b4fe' : 'transparent'),
+                        borderWidth: 2
+                    }]
                 },
                 options: {
                     responsive: true,
                     scales: {
-                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
-                        y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#94a3b8' } }
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
                     },
                     plugins: {
                         legend: { display: false }
