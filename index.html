@@ -47,7 +47,7 @@
         <!-- Header -->
         <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-                <h1 class="text-3xl font-bold text-blue-400">📊 QuantGEX Terminal <span class="text-sm font-normal text-slate-500">v2.1 Pro</span></h1>
+                <h1 class="text-3xl font-bold text-blue-400">📊 QuantGEX Terminal <span class="text-sm font-normal text-slate-500">v2.2 Pro</span></h1>
                 <p class="text-slate-400">Microestrutura, Volume Financeiro e Delta Hedging</p>
             </div>
             <div class="flex gap-4">
@@ -153,6 +153,7 @@
                     <thead class="bg-black/20 text-slate-400 text-[10px] uppercase">
                         <tr>
                             <th class="p-4">Strike</th>
+                            <th class="p-4">Dominância</th>
                             <th class="p-4">GEX Net Nocional</th>
                             <th class="p-4">Volume Financeiro</th>
                             <th class="p-4">OI Total</th>
@@ -160,7 +161,7 @@
                         </tr>
                     </thead>
                     <tbody id="dataTable" class="divide-y divide-white/5 font-mono text-xs">
-                        <tr><td colspan="5" class="p-8 text-center text-slate-500 italic">Importe dados para iniciar a análise quantitativa</td></tr>
+                        <tr><td colspan="6" class="p-8 text-center text-slate-500 italic">Importe dados para iniciar a análise quantitativa</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -189,13 +190,10 @@
         function parseNum(val) {
             if (val === undefined || val === null || val === "") return 0;
             if (typeof val === 'number') return val;
-            // Remove R$, espaços, e trata vírgula como decimal se houver ponto como milhar
             let clean = val.toString().replace(/R\$/g, '').replace(/\s/g, '');
-            // Se tiver vírgula e ponto, assume ponto milhar e vírgula decimal
             if (clean.includes(',') && clean.includes('.')) {
                 clean = clean.replace(/\./g, '').replace(',', '.');
             } else {
-                // Se tiver só vírgula, assume que é o decimal
                 clean = clean.replace(',', '.');
             }
             return parseFloat(clean) || 0;
@@ -244,11 +242,18 @@
                 strikeMap[row.strike].volume += row.volume;
             });
 
-            return Object.values(strikeMap).map(s => ({ 
-                ...s, 
-                totalGex: s.gexCall + s.gexPut,
-                volRatio: s.volume > 0 ? (Math.abs(s.gexCall + s.gexPut) / s.volume) : 0
-            })).sort((a,b) => a.strike - b.strike);
+            return Object.values(strikeMap).map(s => {
+                const totalGex = s.gexCall + s.gexPut;
+                // Cálculo de dominância: Qual lado tem maior peso absoluto de GEX
+                const dominance = Math.abs(s.gexCall) >= Math.abs(s.gexPut) ? 'CALL' : 'PUT';
+                
+                return { 
+                    ...s, 
+                    totalGex,
+                    dominance,
+                    volRatio: s.volume > 0 ? (Math.abs(totalGex) / s.volume) : 0
+                };
+            }).sort((a,b) => a.strike - b.strike);
         }
 
         function getLevels(df) {
@@ -320,7 +325,12 @@
 
             document.getElementById('dataTable').innerHTML = df.map(row => `
                 <tr class="hover:bg-white/5 transition ${row.strike === levels.gammaPin ? 'bg-purple-500/10' : ''}">
-                    <td class="p-4 font-bold">${row.strike.toFixed(2)}</td>
+                    <td class="p-4 font-bold text-slate-300">${row.strike.toFixed(2)}</td>
+                    <td class="p-4">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${row.dominance === 'CALL' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">
+                            ${row.dominance}
+                        </span>
+                    </td>
                     <td class="p-4 ${row.totalGex >= 0 ? 'text-green-400' : 'text-red-400'}">
                         ${row.totalGex.toLocaleString('pt-BR', {maximumFractionDigits:0})}
                     </td>
