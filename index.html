@@ -47,8 +47,8 @@
         <!-- Header -->
         <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
-                <h1 class="text-3xl font-bold text-blue-400">📊 QuantGEX Terminal <span class="text-sm font-normal text-slate-500">v2.0 Pro</span></h1>
-                <p class="text-slate-400">Microestrutura, Fluxo de Opções e Delta Hedging</p>
+                <h1 class="text-3xl font-bold text-blue-400">📊 QuantGEX Terminal <span class="text-sm font-normal text-slate-500">v2.1 Pro</span></h1>
+                <p class="text-slate-400">Microestrutura, Volume Financeiro e Delta Hedging</p>
             </div>
             <div class="flex gap-4">
                 <div class="glass-card p-3 rounded-lg text-center min-w-[150px]">
@@ -65,14 +65,14 @@
                 <div class="flex flex-col md:flex-row items-center gap-4">
                     <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-slate-400">
                     <p class="text-[10px] text-slate-500 leading-tight">
-                        Formato: <span class="text-slate-300">ticker, tipo, strike, OI, Gamma</span>
+                        Formato: <span class="text-slate-300">ticker, tipo, strike, OI, Gamma, Volume</span>
                     </p>
                 </div>
             </div>
             <div class="glass-card p-6 rounded-xl flex flex-col justify-center">
-                <span class="text-xs text-slate-400 uppercase">Delta Hedging Est. (1%)</span>
-                <div id="deltaHedgeVal" class="text-xl font-bold text-blue-400">--</div>
-                <p class="text-[10px] text-slate-500">Fluxo necessário de MMs por movimento de 1% no Spot</p>
+                <span class="text-xs text-slate-400 uppercase">Volume Financeiro Total</span>
+                <div id="totalVolumeVal" class="text-xl font-bold text-emerald-400">--</div>
+                <p class="text-[10px] text-slate-500 italic">Total negociado na sessão importada</p>
             </div>
         </div>
 
@@ -109,10 +109,11 @@
             <!-- Gráfico -->
             <div class="lg:col-span-2 glass-card p-6 rounded-xl">
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-sm font-semibold text-slate-200 uppercase tracking-widest">Exposição Líquida de Gamma por Strike</h3>
+                    <h3 class="text-sm font-semibold text-slate-200 uppercase tracking-widest">Exposição de Gamma vs Concentração de Volume</h3>
                     <div class="flex gap-2">
                         <span class="flex items-center gap-1 text-[10px] text-slate-400"><span class="w-2 h-2 bg-green-500 rounded-full"></span> Pos GEX</span>
                         <span class="flex items-center gap-1 text-[10px] text-slate-400"><span class="w-2 h-2 bg-red-500 rounded-full"></span> Neg GEX</span>
+                        <span class="flex items-center gap-1 text-[10px] text-slate-400"><span class="w-2 h-2 bg-blue-400 rounded-full"></span> Volume</span>
                     </div>
                 </div>
                 <div class="chart-container">
@@ -133,11 +134,10 @@
                     </div>
                 </div>
                 <div class="mt-6 pt-4 border-t border-white/5">
-                    <h4 class="text-xs font-bold text-blue-400 mb-2 uppercase">Dicionário de Risco:</h4>
+                    <h4 class="text-xs font-bold text-blue-400 mb-2 uppercase">Análise de Fluxo:</h4>
                     <ul class="text-[10px] text-slate-500 space-y-1">
-                        <li>• <strong>GEX Positivo:</strong> MMs compram quedas e vendem altas (Baixa Vol).</li>
-                        <li>• <strong>GEX Negativo:</strong> MMs vendem quedas e compram altas (Alta Vol).</li>
-                        <li>• <strong>Vanna:</strong> Sensibilidade da posição à mudança de Vol implícita.</li>
+                        <li>• <strong>Volume > OI:</strong> Indica entrada de novas posições e possível mudança de regime.</li>
+                        <li>• <strong>Pinning Real:</strong> Confirmado quando o Gamma Pin coincide com alto volume financeiro.</li>
                     </ul>
                 </div>
             </div>
@@ -146,18 +146,17 @@
         <!-- Tabela -->
         <div class="mt-8 glass-card rounded-xl overflow-hidden">
             <div class="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
-                <h3 class="font-semibold text-sm">GEX & Liquidez por Nível</h3>
-                <button onclick="exportData()" class="text-[10px] bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded transition">Exportar Análise</button>
+                <h3 class="font-semibold text-sm">GEX, Volume & Liquidez por Nível</h3>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left text-sm">
                     <thead class="bg-black/20 text-slate-400 text-[10px] uppercase">
                         <tr>
                             <th class="p-4">Strike</th>
-                            <th class="p-4">Nocional Líquido</th>
+                            <th class="p-4">GEX Net Nocional</th>
+                            <th class="p-4">Volume Financeiro</th>
                             <th class="p-4">OI Total</th>
-                            <th class="p-4">Dominância</th>
-                            <th class="p-4">Risco MM</th>
+                            <th class="p-4">GEX/Vol Ratio</th>
                         </tr>
                     </thead>
                     <tbody id="dataTable" class="divide-y divide-white/5 font-mono text-xs">
@@ -193,7 +192,8 @@
                 tipo: (row.tipo || row.Tipo || "").toLowerCase(),
                 strike: parseFloat(row.strike || row.Strike),
                 oi: parseFloat(row.OI || row.oi || row.open_interest),
-                gamma: parseFloat(row.Gamma || row.gamma)
+                gamma: parseFloat(row.Gamma || row.gamma),
+                volume: parseFloat(row.volume || row.Volume || 0)
             })).filter(r => !isNaN(r.strike) && !isNaN(r.oi) && !isNaN(r.gamma));
             updateData();
         }
@@ -202,9 +202,8 @@
         function calculateGEX(data, spot) {
             const strikeMap = {};
             data.forEach(row => {
-                if (!strikeMap[row.strike]) strikeMap[row.strike] = { strike: row.strike, gexCall: 0, gexPut: 0, oi: 0, ticker: row.ticker };
+                if (!strikeMap[row.strike]) strikeMap[row.strike] = { strike: row.strike, gexCall: 0, gexPut: 0, oi: 0, volume: 0, ticker: row.ticker };
                 
-                // Cálculo de GEX Nocional
                 const gexVal = row.gamma * row.oi * 100 * spot;
                 
                 if (row.tipo === 'call' || row.tipo === 'c') {
@@ -213,12 +212,13 @@
                     strikeMap[row.strike].gexPut -= gexVal;
                 }
                 strikeMap[row.strike].oi += row.oi;
+                strikeMap[row.strike].volume += row.volume;
             });
 
             return Object.values(strikeMap).map(s => ({ 
                 ...s, 
                 totalGex: s.gexCall + s.gexPut,
-                dominance: s.gexCall > Math.abs(s.gexPut) ? 'CALL' : 'PUT'
+                volRatio: s.volume > 0 ? (Math.abs(s.totalGex) / s.volume) : 0
             })).sort((a,b) => a.strike - b.strike);
         }
 
@@ -232,6 +232,7 @@
 
             const gammaFlip = df.reduce((prev, curr) => (Math.abs(curr.totalGex) < Math.abs(prev.totalGex)) ? curr : prev).strike;
             const netGex = df.reduce((sum, curr) => sum + curr.totalGex, 0);
+            const totalVol = df.reduce((sum, curr) => sum + curr.volume, 0);
 
             return { 
                 callWall: callWallRow.strike, 
@@ -240,12 +241,14 @@
                 putWallOi: putWallRow.oi,
                 gammaPin, 
                 gammaFlip, 
-                netGex 
+                netGex,
+                totalVol
             };
         }
 
         function updateUI(df, levels, spot) {
             document.getElementById('netGexValue').innerText = `R$ ${levels.netGex.toLocaleString('pt-BR', {maximumFractionDigits: 0})}`;
+            document.getElementById('totalVolumeVal').innerText = `R$ ${levels.totalVol.toLocaleString('pt-BR', {maximumFractionDigits: 0})}`;
             document.getElementById('callWallValue').innerText = `$ ${levels.callWall.toFixed(2)}`;
             document.getElementById('callWallOi').innerText = `OI: ${levels.callWallOi.toLocaleString()}`;
             document.getElementById('putWallValue').innerText = `$ ${levels.putWall.toFixed(2)}`;
@@ -253,34 +256,32 @@
             document.getElementById('gammaFlipValue').innerText = `$ ${levels.gammaFlip.toFixed(2)}`;
             document.getElementById('gammaPinValue').innerText = `$ ${levels.gammaPin.toFixed(2)}`;
 
-            // Delta Hedging Estimate
-            const deltaHedge = (levels.netGex * 0.01) / spot;
-            document.getElementById('deltaHedgeVal').innerText = `R$ ${deltaHedge.toLocaleString('pt-BR', {maximumFractionDigits: 0})}`;
-
             const isPos = levels.netGex > 0;
             const badge = document.getElementById('regimeBadge');
             badge.innerText = isPos ? 'Gamma Longo (Estável)' : 'Gamma Curto (Instável)';
             badge.className = `mt-1 inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${isPos ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`;
 
-            // Advanced Insights
+            // Advanced Insights based on Volume
+            const topVolStrike = df.reduce((prev, curr) => (curr.volume > prev.volume) ? curr : prev);
             let stratHtml = `<div class="space-y-3">`;
             
-            if (!isPos) {
-                stratHtml += `<div class="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
-                    <p class="text-red-400 font-bold text-xs uppercase mb-1">⚠️ Alerta de Aceleração</p>
-                    <p class="text-[11px]">Mercado em Short Gamma. Movimentos de preço serão amplificados pelo Delta Hedging dos MMs. O suporte em $${levels.putWall} é crítico.</p>
-                </div>`;
-            } else {
-                stratHtml += `<div class="p-3 rounded-lg bg-green-500/10 border border-green-500/30">
-                    <p class="text-green-400 font-bold text-xs uppercase mb-1">🛡️ Amortecimento Ativo</p>
-                    <p class="text-[11px]">MMs estão contra-tendência. Quedas tendem a encontrar compradores passivos. Ponto de equilíbrio ideal em $${levels.gammaPin}.</p>
+            if (topVolStrike.strike === levels.gammaPin) {
+                stratHtml += `<div class="p-3 rounded-lg bg-purple-500/10 border border-purple-500/30">
+                    <p class="text-purple-400 font-bold text-xs uppercase mb-1">🎯 Pinning de Alta Confiança</p>
+                    <p class="text-[11px]">O maior Volume Financeiro coincide com o Gamma Pin em $${levels.gammaPin}. Probabilidade estatística de ancoragem de preço extrema para este nível.</p>
                 </div>`;
             }
 
-            const distToFlip = ((spot - levels.gammaFlip) / spot) * 100;
-            stratHtml += `<div class="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
-                <p class="text-blue-400 font-bold text-xs uppercase mb-1">📍 Proximidade do Flip</p>
-                <p class="text-[11px]">O preço está a ${distToFlip.toFixed(2)}% do Gamma Flip. Cruzar este nível altera completamente a dinâmica de volatilidade do ativo.</p>
+            if (topVolStrike.volume > (levels.totalVol * 0.3)) {
+                stratHtml += `<div class="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+                    <p class="text-yellow-400 font-bold text-xs uppercase mb-1">🔥 Anomalia de Volume</p>
+                    <p class="text-[11px]">O strike $${topVolStrike.strike} concentra mais de 30% do volume financeiro total. Fique atento a uma nova "parede" se formando fora do Open Interest atual.</p>
+                </div>`;
+            }
+
+            stratHtml += `<div class="p-3 rounded-lg bg-slate-800 border border-white/5">
+                <p class="text-slate-400 font-bold text-xs uppercase mb-1">📊 Perfil da Sessão</p>
+                <p class="text-[11px]">Dominância de volume no strike $${topVolStrike.strike}. Relação GEX/Volume atual sugere ${levels.netGex > 0 ? 'distribuição' : 'acumulação de proteção'}.</p>
             </div></div>`;
             
             document.getElementById('strategyContent').innerHTML = stratHtml;
@@ -288,17 +289,24 @@
             // Table update
             document.getElementById('dataTable').innerHTML = df.map(row => `
                 <tr class="hover:bg-white/5 transition ${row.strike === levels.gammaPin ? 'bg-purple-500/10' : ''}">
-                    <td class="p-4 font-bold flex items-center gap-2">
+                    <td class="p-4 font-bold">
                         ${row.strike.toFixed(2)}
-                        ${row.strike === levels.gammaPin ? '<span class="pin-label">PIN</span>' : ''}
-                        ${row.strike === levels.gammaFlip ? '<span class="bg-orange-500 text-white px-1 rounded text-[8px]">FLIP</span>' : ''}
                     </td>
                     <td class="p-4 ${row.totalGex >= 0 ? 'text-green-400' : 'text-red-400'}">
                         ${row.totalGex.toLocaleString('pt-BR', {maximumFractionDigits:0})}
                     </td>
+                    <td class="p-4 text-emerald-400">
+                        ${row.volume.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
+                    </td>
                     <td class="p-4 text-slate-400">${row.oi.toLocaleString()}</td>
-                    <td class="p-4"><span class="px-2 py-0.5 rounded-full bg-slate-800 text-[9px]">${row.dominance}</span></td>
-                    <td class="p-4 text-slate-500 italic">${row.totalGex > 0 ? 'Hedge Passivo' : 'Hedge Agressivo'}</td>
+                    <td class="p-4">
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 h-1 bg-slate-800 rounded-full overflow-hidden">
+                                <div class="h-full bg-blue-500" style="width: ${Math.min(row.volRatio * 10, 100)}%"></div>
+                            </div>
+                            <span class="text-[9px]">${row.volRatio.toFixed(2)}</span>
+                        </div>
+                    </td>
                 </tr>
             `).join('');
 
@@ -313,12 +321,25 @@
                 type: 'bar',
                 data: {
                     labels: df.map(r => r.strike),
-                    datasets: [{
-                        label: 'GEX Net',
-                        data: df.map(r => r.totalGex),
-                        backgroundColor: df.map(r => r.totalGex >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
-                        borderRadius: 4,
-                    }]
+                    datasets: [
+                        {
+                            label: 'GEX Net',
+                            data: df.map(r => r.totalGex),
+                            backgroundColor: df.map(r => r.totalGex >= 0 ? 'rgba(16, 185, 129, 0.7)' : 'rgba(239, 68, 68, 0.7)'),
+                            borderRadius: 4,
+                            yAxisID: 'y',
+                        },
+                        {
+                            label: 'Volume Financeiro',
+                            type: 'line',
+                            data: df.map(r => r.volume),
+                            borderColor: '#60a5fa',
+                            borderWidth: 2,
+                            pointRadius: 2,
+                            fill: false,
+                            yAxisID: 'y1',
+                        }
+                    ]
                 },
                 options: {
                     maintainAspectRatio: false,
@@ -329,17 +350,22 @@
                             ticks: { color: '#64748b', font: { size: 10 } } 
                         },
                         y: { 
+                            position: 'left',
                             grid: { color: 'rgba(255,255,255,0.05)' }, 
                             ticks: { color: '#64748b', font: { size: 10 } } 
+                        },
+                        y1: {
+                            position: 'right',
+                            grid: { display: false },
+                            ticks: { display: false }
                         }
                     },
                     plugins: {
                         legend: { display: false },
                         tooltip: {
                             backgroundColor: '#1e293b',
-                            titleColor: '#60a5fa',
                             callbacks: {
-                                label: (ctx) => `GEX: R$ ${ctx.raw.toLocaleString('pt-BR')}`
+                                label: (ctx) => `${ctx.dataset.label}: R$ ${ctx.raw.toLocaleString('pt-BR')}`
                             }
                         }
                     }
