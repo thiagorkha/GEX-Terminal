@@ -186,25 +186,43 @@
             reader.readAsArrayBuffer(file);
         });
 
+        function parseNum(val) {
+            if (val === undefined || val === null || val === "") return 0;
+            if (typeof val === 'number') return val;
+            // Remove R$, espaços, e trata vírgula como decimal se houver ponto como milhar
+            let clean = val.toString().replace(/R\$/g, '').replace(/\s/g, '');
+            // Se tiver vírgula e ponto, assume ponto milhar e vírgula decimal
+            if (clean.includes(',') && clean.includes('.')) {
+                clean = clean.replace(/\./g, '').replace(',', '.');
+            } else {
+                // Se tiver só vírgula, assume que é o decimal
+                clean = clean.replace(',', '.');
+            }
+            return parseFloat(clean) || 0;
+        }
+
         function processImportedData(json) {
-            // Mapeamento robusto para suportar várias nomenclaturas de colunas
             lastRawData = json.map(row => {
-                const getVal = (names) => {
-                    for (let name of names) {
-                        if (row[name] !== undefined) return row[name];
-                    }
-                    return undefined;
+                const findKey = (list) => {
+                    const keys = Object.keys(row);
+                    return keys.find(k => list.some(l => k.toLowerCase().trim() === l.toLowerCase())) || null;
                 };
 
+                const volKey = findKey(['volume financeiro', 'volume_financeiro', 'volume', 'vol', 'financeiro', 'valor']);
+                const strikeKey = findKey(['strike', 'preço exercício', 'preco', 'exercicio']);
+                const oiKey = findKey(['oi', 'open interest', 'aberto', 'contratos']);
+                const gammaKey = findKey(['gamma', 'gama', 'gex']);
+                const typeKey = findKey(['tipo', 'call/put', 'type', 'c/p']);
+
                 return {
-                    ticker: getVal(['ticker', 'Ticker', 'Ativo', 'ativo']) || "ASSET",
-                    tipo: (getVal(['tipo', 'Tipo', 'type', 'Type', 'Call/Put']) || "").toLowerCase(),
-                    strike: parseFloat(getVal(['strike', 'Strike', 'Preço Exercício'])),
-                    oi: parseFloat(getVal(['OI', 'oi', 'open_interest', 'Open Interest'])),
-                    gamma: parseFloat(getVal(['Gamma', 'gamma', 'GAMA', 'gama'])),
-                    volume: parseFloat(getVal(['Volume Financeiro', 'volume_financeiro', 'volume', 'Volume', 'VOL', 'Vol'])) || 0
+                    ticker: row[findKey(['ticker', 'ativo', 'symbol'])] || "ASSET",
+                    tipo: (row[typeKey] || "").toString().toLowerCase(),
+                    strike: parseNum(row[strikeKey]),
+                    oi: parseNum(row[oiKey]),
+                    gamma: parseNum(row[gammaKey]),
+                    volume: parseNum(row[volKey])
                 };
-            }).filter(r => !isNaN(r.strike) && !isNaN(r.oi) && !isNaN(r.gamma));
+            }).filter(r => !isNaN(r.strike) && r.strike > 0);
             
             updateData();
         }
@@ -219,7 +237,7 @@
                 
                 if (row.tipo === 'call' || row.tipo === 'c' || row.tipo.includes('call')) {
                     strikeMap[row.strike].gexCall += gexVal;
-                } else {
+                } else if (row.tipo === 'put' || row.tipo === 'p' || row.tipo.includes('put')) {
                     strikeMap[row.strike].gexPut -= gexVal;
                 }
                 strikeMap[row.strike].oi += row.oi;
@@ -229,7 +247,7 @@
             return Object.values(strikeMap).map(s => ({ 
                 ...s, 
                 totalGex: s.gexCall + s.gexPut,
-                volRatio: s.volume > 0 ? (Math.abs(s.totalGex) / s.volume) : 0
+                volRatio: s.volume > 0 ? (Math.abs(s.gexCall + s.gexPut) / s.volume) : 0
             })).sort((a,b) => a.strike - b.strike);
         }
 
@@ -276,11 +294,10 @@
             badge.innerText = isPos ? 'Gamma Longo (Estável)' : 'Gamma Curto (Instável)';
             badge.className = `mt-1 inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${isPos ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`;
 
-            // Advanced Insights baseados no Volume
             const topVolStrike = df.reduce((prev, curr) => (curr.volume > prev.volume) ? curr : prev);
             let stratHtml = `<div class="space-y-3">`;
             
-            if (topVolStrike.strike === levels.gammaPin) {
+            if (topVolStrike.volume > 0 && topVolStrike.strike === levels.gammaPin) {
                 stratHtml += `<div class="p-3 rounded-lg bg-purple-500/10 border border-purple-500/30">
                     <p class="text-purple-400 font-bold text-xs uppercase mb-1">🎯 Pinning de Alta Confiança</p>
                     <p class="text-[11px]">O maior Volume Financeiro coincide com o Gamma Pin em $${levels.gammaPin}. Probabilidade estatística de ancoragem de preço extrema para este nível.</p>
@@ -290,7 +307,7 @@
             if (levels.totalVol > 0 && topVolStrike.volume > (levels.totalVol * 0.3)) {
                 stratHtml += `<div class="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
                     <p class="text-yellow-400 font-bold text-xs uppercase mb-1">🔥 Anomalia de Volume</p>
-                    <p class="text-[11px]">O strike $${topVolStrike.strike} concentra mais de 30% do volume financeiro total da sessão. Forte pressão direcional detectada.</p>
+                    <p class="text-[11px]">O strike $${topVolStrike.strike} concentra mais de 30% do volume financeiro total. Forte pressão direcional detectada.</p>
                 </div>`;
             }
 
@@ -301,16 +318,13 @@
             
             document.getElementById('strategyContent').innerHTML = stratHtml;
 
-            // Table update
             document.getElementById('dataTable').innerHTML = df.map(row => `
                 <tr class="hover:bg-white/5 transition ${row.strike === levels.gammaPin ? 'bg-purple-500/10' : ''}">
-                    <td class="p-4 font-bold">
-                        ${row.strike.toFixed(2)}
-                    </td>
+                    <td class="p-4 font-bold">${row.strike.toFixed(2)}</td>
                     <td class="p-4 ${row.totalGex >= 0 ? 'text-green-400' : 'text-red-400'}">
                         ${row.totalGex.toLocaleString('pt-BR', {maximumFractionDigits:0})}
                     </td>
-                    <td class="p-4 text-emerald-400">
+                    <td class="p-4 text-emerald-400 font-bold">
                         ${row.volume.toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'})}
                     </td>
                     <td class="p-4 text-slate-400">${row.oi.toLocaleString()}</td>
@@ -376,13 +390,7 @@
                         }
                     },
                     plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            backgroundColor: '#1e293b',
-                            callbacks: {
-                                label: (ctx) => `${ctx.dataset.label}: R$ ${ctx.raw.toLocaleString('pt-BR')}`
-                            }
-                        }
+                        legend: { display: false }
                     }
                 }
             });
