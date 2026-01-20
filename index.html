@@ -65,7 +65,7 @@
                 <div class="flex flex-col md:flex-row items-center gap-4">
                     <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-slate-400">
                     <p class="text-[10px] text-slate-500 leading-tight">
-                        Formato: <span class="text-slate-300">ticker, tipo, strike, OI, Gamma, Volume</span>
+                        Formato esperado: <span class="text-slate-300">ticker, tipo, strike, OI, Gamma, Volume Financeiro</span>
                     </p>
                 </div>
             </div>
@@ -187,14 +187,25 @@
         });
 
         function processImportedData(json) {
-            lastRawData = json.map(row => ({
-                ticker: row.ticker || row.Ticker || "ASSET",
-                tipo: (row.tipo || row.Tipo || "").toLowerCase(),
-                strike: parseFloat(row.strike || row.Strike),
-                oi: parseFloat(row.OI || row.oi || row.open_interest),
-                gamma: parseFloat(row.Gamma || row.gamma),
-                volume: parseFloat(row.volume || row.Volume || 0)
-            })).filter(r => !isNaN(r.strike) && !isNaN(r.oi) && !isNaN(r.gamma));
+            // Mapeamento robusto para suportar várias nomenclaturas de colunas
+            lastRawData = json.map(row => {
+                const getVal = (names) => {
+                    for (let name of names) {
+                        if (row[name] !== undefined) return row[name];
+                    }
+                    return undefined;
+                };
+
+                return {
+                    ticker: getVal(['ticker', 'Ticker', 'Ativo', 'ativo']) || "ASSET",
+                    tipo: (getVal(['tipo', 'Tipo', 'type', 'Type', 'Call/Put']) || "").toLowerCase(),
+                    strike: parseFloat(getVal(['strike', 'Strike', 'Preço Exercício'])),
+                    oi: parseFloat(getVal(['OI', 'oi', 'open_interest', 'Open Interest'])),
+                    gamma: parseFloat(getVal(['Gamma', 'gamma', 'GAMA', 'gama'])),
+                    volume: parseFloat(getVal(['Volume Financeiro', 'volume_financeiro', 'volume', 'Volume', 'VOL', 'Vol'])) || 0
+                };
+            }).filter(r => !isNaN(r.strike) && !isNaN(r.oi) && !isNaN(r.gamma));
+            
             updateData();
         }
 
@@ -206,7 +217,7 @@
                 
                 const gexVal = row.gamma * row.oi * 100 * spot;
                 
-                if (row.tipo === 'call' || row.tipo === 'c') {
+                if (row.tipo === 'call' || row.tipo === 'c' || row.tipo.includes('call')) {
                     strikeMap[row.strike].gexCall += gexVal;
                 } else {
                     strikeMap[row.strike].gexPut -= gexVal;
@@ -223,6 +234,8 @@
         }
 
         function getLevels(df) {
+            if (df.length === 0) return null;
+
             const callWallRow = df.reduce((prev, curr) => (curr.gexCall > prev.gexCall) ? curr : prev);
             const putWallRow = df.reduce((prev, curr) => (curr.gexPut < prev.gexPut) ? curr : prev);
             
@@ -247,6 +260,8 @@
         }
 
         function updateUI(df, levels, spot) {
+            if (!levels) return;
+
             document.getElementById('netGexValue').innerText = `R$ ${levels.netGex.toLocaleString('pt-BR', {maximumFractionDigits: 0})}`;
             document.getElementById('totalVolumeVal').innerText = `R$ ${levels.totalVol.toLocaleString('pt-BR', {maximumFractionDigits: 0})}`;
             document.getElementById('callWallValue').innerText = `$ ${levels.callWall.toFixed(2)}`;
@@ -261,7 +276,7 @@
             badge.innerText = isPos ? 'Gamma Longo (Estável)' : 'Gamma Curto (Instável)';
             badge.className = `mt-1 inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${isPos ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`;
 
-            // Advanced Insights based on Volume
+            // Advanced Insights baseados no Volume
             const topVolStrike = df.reduce((prev, curr) => (curr.volume > prev.volume) ? curr : prev);
             let stratHtml = `<div class="space-y-3">`;
             
@@ -272,16 +287,16 @@
                 </div>`;
             }
 
-            if (topVolStrike.volume > (levels.totalVol * 0.3)) {
+            if (levels.totalVol > 0 && topVolStrike.volume > (levels.totalVol * 0.3)) {
                 stratHtml += `<div class="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
                     <p class="text-yellow-400 font-bold text-xs uppercase mb-1">🔥 Anomalia de Volume</p>
-                    <p class="text-[11px]">O strike $${topVolStrike.strike} concentra mais de 30% do volume financeiro total. Fique atento a uma nova "parede" se formando fora do Open Interest atual.</p>
+                    <p class="text-[11px]">O strike $${topVolStrike.strike} concentra mais de 30% do volume financeiro total da sessão. Forte pressão direcional detectada.</p>
                 </div>`;
             }
 
             stratHtml += `<div class="p-3 rounded-lg bg-slate-800 border border-white/5">
                 <p class="text-slate-400 font-bold text-xs uppercase mb-1">📊 Perfil da Sessão</p>
-                <p class="text-[11px]">Dominância de volume no strike $${topVolStrike.strike}. Relação GEX/Volume atual sugere ${levels.netGex > 0 ? 'distribuição' : 'acumulação de proteção'}.</p>
+                <p class="text-[11px]">Dominância de volume no strike $${topVolStrike.strike}. Relação GEX/Volume actual sugere ${levels.netGex > 0 ? 'estabilização' : 'busca por liquidez'}.</p>
             </div></div>`;
             
             document.getElementById('strategyContent').innerHTML = stratHtml;
