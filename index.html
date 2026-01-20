@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuantGEX Terminal | Opções & Gamma</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS para processar Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        body {
+            background-color: #0f172a;
+            color: #f1f5f9;
+        }
+        input[type="file"]::file-selector-button {
+            background-color: #2563eb;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            border: none;
+            cursor: pointer;
+            margin-right: 1rem;
+            transition: background 0.2s;
+        }
+        input[type="file"]::file-selector-button:hover {
+            background-color: #1d4ed8;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-blue-400">📊 QuantGEX Terminal</h1>
+                <p class="text-slate-400">Importação de Dados de Opções via Excel</p>
+            </div>
+            <div class="flex gap-4">
+                <div class="glass-card p-3 rounded-lg text-center min-w-[150px]">
+                    <span class="block text-xs uppercase text-slate-400">Spot Price Atual</span>
+                    <input type="number" id="spotPrice" value="100.00" step="0.01" class="bg-transparent text-xl font-bold w-full text-center outline-none text-white">
+                </div>
+            </div>
+        </header>
+
+        <!-- Import Section -->
+        <div class="glass-card p-6 rounded-xl mb-8">
+            <h2 class="text-lg font-semibold mb-4 text-blue-300">📁 Importar Cadeia de Opções</h2>
+            <div class="flex flex-col md:flex-row items-center gap-4">
+                <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-slate-400">
+                <p class="text-xs text-slate-500 whitespace-nowrap">
+                    Colunas obrigatórias: <span class="text-slate-300">ticker, tipo, strike, OI, Gamma</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Main Dashboard -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+            <!-- KPIs -->
+            <div class="glass-card p-6 rounded-xl border-l-4 border-blue-500">
+                <span class="text-sm text-slate-400">Net GEX Agregado</span>
+                <div id="netGexValue" class="text-2xl font-bold text-white">--</div>
+                <div id="regimeBadge" class="mt-2 inline-block px-2 py-1 rounded text-xs font-bold uppercase">Aguardando...</div>
+            </div>
+            <div class="glass-card p-6 rounded-xl border-l-4 border-green-500">
+                <span class="text-sm text-slate-400">Call Wall</span>
+                <div id="callWallValue" class="text-2xl font-bold text-white">--</div>
+                <span class="text-xs text-slate-400">Maior Resistência</span>
+            </div>
+            <div class="glass-card p-6 rounded-xl border-l-4 border-red-500">
+                <span class="text-sm text-slate-400">Put Wall</span>
+                <div id="putWallValue" class="text-2xl font-bold text-white">--</div>
+                <span class="text-xs text-slate-400">Maior Suporte</span>
+            </div>
+            <div class="glass-card p-6 rounded-xl border-l-4 border-orange-500">
+                <span class="text-sm text-slate-400">Gamma Flip</span>
+                <div id="gammaFlipValue" class="text-2xl font-bold text-white">--</div>
+                <span class="text-xs text-slate-400">Inflexão de Vol</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Gráfico -->
+            <div class="lg:col-span-2 glass-card p-6 rounded-xl">
+                <h3 class="text-lg font-semibold mb-4 text-slate-200 text-center">Perfil de Exposição Gamma por Strike</h3>
+                <canvas id="gexChart" height="150"></canvas>
+            </div>
+
+            <!-- Estratégias -->
+            <div class="glass-card p-6 rounded-xl">
+                <h3 class="text-lg font-semibold mb-4 text-slate-200 flex items-center gap-2">
+                    💡 Análise Estratégica
+                </h3>
+                <div id="strategyContent" class="space-y-4">
+                    <p class="text-slate-500 italic text-sm text-center py-10">Importe um arquivo para gerar a análise.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela de Dados -->
+        <div class="mt-8 glass-card rounded-xl overflow-hidden">
+            <div class="p-4 border-b border-white/10">
+                <h3 class="font-semibold" id="tableTitle">Dados Processados</h3>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-white/5 text-slate-300">
+                        <tr>
+                            <th class="p-4">Ticker</th>
+                            <th class="p-4">Strike</th>
+                            <th class="p-4">Tipo</th>
+                            <th class="p-4">OI</th>
+                            <th class="p-4">Gamma</th>
+                            <th class="p-4">Net GEX ($)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dataTable" class="divide-y divide-white/5">
+                        <tr>
+                            <td colspan="6" class="p-8 text-center text-slate-500">Nenhum dado importado</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chartInstance = null;
+        let lastRawData = [];
+
+        // --- PARSER DE EXCEL ---
+        document.getElementById('excelInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet);
+
+                processImportedData(json);
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        function processImportedData(json) {
+            try {
+                // Mapeia e valida as colunas
+                lastRawData = json.map(row => ({
+                    ticker: row.ticker || row.Ticker,
+                    tipo: (row.tipo || row.Tipo || "").toLowerCase(),
+                    strike: parseFloat(row.strike || row.Strike),
+                    oi: parseFloat(row.OI || row.oi || row.open_interest),
+                    gamma: parseFloat(row.Gamma || row.gamma)
+                })).filter(r => !isNaN(r.strike) && !isNaN(r.oi) && !isNaN(r.gamma));
+
+                if (lastRawData.length === 0) {
+                    alert("Dados inválidos ou colunas não encontradas. Verifique se o arquivo contém: ticker, tipo, strike, OI e Gamma.");
+                    return;
+                }
+
+                updateData();
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao processar arquivo Excel.");
+            }
+        }
+
+        // --- ENGINE QUANTITATIVA ---
+        function calculateGEX(data, spot) {
+            // Agrupar por strike para consolidar Calls e Puts do mesmo strike
+            const strikeMap = {};
+
+            data.forEach(row => {
+                if (!strikeMap[row.strike]) {
+                    strikeMap[row.strike] = { strike: row.strike, gexCall: 0, gexPut: 0, oiCall: 0, oiPut: 0, ticker: row.ticker };
+                }
+                
+                // GEX = Gamma * OI * 100 * Spot
+                // Calls = Positivo para MM, Puts = Negativo para MM
+                const gexValue = row.gamma * row.oi * 100 * spot;
+                
+                if (row.tipo === 'call' || row.tipo === 'c') {
+                    strikeMap[row.strike].gexCall += gexValue;
+                    strikeMap[row.strike].oiCall += row.oi;
+                } else if (row.tipo === 'put' || row.tipo === 'p') {
+                    strikeMap[row.strike].gexPut -= gexValue; // Negativo pois MM compra put para hedge
+                    strikeMap[row.strike].oiPut += row.oi;
+                }
+            });
+
+            return Object.values(strikeMap).map(s => ({
+                ...s,
+                totalGex: s.gexCall + s.gexPut
+            })).sort((a, b) => a.strike - b.strike);
+        }
+
+        function getLevels(df) {
+            const callWall = df.reduce((prev, curr) => (prev.gexCall > curr.gexCall) ? prev : curr).strike;
+            const putWall = df.reduce((prev, curr) => (prev.gexPut < curr.gexPut) ? prev : curr).strike;
+            const gammaPin = df.reduce((prev, curr) => (Math.abs(prev.totalGex) > Math.abs(curr.totalGex)) ? prev : curr).strike;
+            const gammaFlip = df.reduce((prev, curr) => (Math.abs(prev.totalGex) < Math.abs(curr.totalGex)) ? prev : curr).strike;
+            const netGex = df.reduce((sum, curr) => sum + curr.totalGex, 0);
+
+            return { callWall, putWall, gammaPin, gammaFlip, netGex };
+        }
+
+        // --- UI & GRAFICO ---
+        function updateUI(df, levels, spot) {
+            document.getElementById('netGexValue').innerText = `R$ ${levels.netGex.toLocaleString('pt-BR', {minimumFractionDigits: 0, maximumFractionDigits: 0})}`;
+            document.getElementById('callWallValue').innerText = `$ ${levels.callWall.toFixed(2)}`;
+            document.getElementById('putWallValue').innerText = `$ ${levels.putWall.toFixed(2)}`;
+            document.getElementById('gammaFlipValue').innerText = `$ ${levels.gammaFlip.toFixed(2)}`;
+
+            const badge = document.getElementById('regimeBadge');
+            const isPos = levels.netGex > 0;
+            badge.innerText = isPos ? 'Positive Gamma' : 'Negative Gamma';
+            badge.className = `mt-2 inline-block px-2 py-1 rounded text-xs font-bold uppercase ${isPos ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`;
+
+            // Estratégias
+            const stratDiv = document.getElementById('strategyContent');
+            let html = `<div class="p-4 rounded-lg bg-slate-800/50 border border-white/10">
+                <p class="font-bold text-blue-400 mb-1">Análise de Mercado:</p>
+                <p class="text-sm">${isPos ? 'Ambiente de volatilidade reprimida. Suportes e resistências tendem a segurar o preço.' : 'Ambiente de volatilidade explosiva. Rompimentos tendem a ganhar aceleração rápida.'}</p>
+            </div>`;
+            
+            html += `<div class="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                <p class="font-bold text-emerald-400 mb-1">Estratégia Recomendada:</p>
+                <p class="text-sm font-semibold">${isPos ? 'Venda de Vol (Iron Condors). Reversão à média.' : 'Compra de Vol (Strangles). Breakout Strategy.'}</p>
+            </div>`;
+
+            stratDiv.innerHTML = html;
+
+            // Tabela
+            const tableBody = document.getElementById('dataTable');
+            tableBody.innerHTML = df.map(row => `
+                <tr class="hover:bg-white/5 transition">
+                    <td class="p-4 text-slate-400">${row.ticker || '--'}</td>
+                    <td class="p-4 font-mono font-bold ${row.strike === levels.gammaFlip ? 'text-orange-400' : ''}">${row.strike.toFixed(2)}</td>
+                    <td class="p-4 text-xs uppercase">
+                        <span class="text-green-500">C</span> / <span class="text-red-500">P</span>
+                    </td>
+                    <td class="p-4 text-slate-400">${(row.oiCall + row.oiPut).toLocaleString()}</td>
+                    <td class="p-4 text-slate-400">${((row.gexCall + Math.abs(row.gexPut)) / (spot * 100)).toFixed(4)}</td>
+                    <td class="p-4 font-bold ${row.totalGex >= 0 ? 'text-green-400' : 'text-red-400'}">${row.totalGex.toLocaleString('pt-BR', {maximumFractionDigits: 0})}</td>
+                </tr>
+            `).join('');
+
+            renderChart(df, spot);
+        }
+
+        function renderChart(df, spot) {
+            const ctx = document.getElementById('gexChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: df.map(r => r.strike.toFixed(2)),
+                    datasets: [
+                        { label: 'Exposição Gamma ($)', data: df.map(r => r.totalGex), 
+                          backgroundColor: df.map(r => r.totalGex >= 0 ? '#10b981' : '#ef4444') }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                        y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#94a3b8' } }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        function updateData() {
+            if (lastRawData.length === 0) return;
+            const spot = parseFloat(document.getElementById('spotPrice').value);
+            const calculated = calculateGEX(lastRawData, spot);
+            const levels = getLevels(calculated);
+            updateUI(calculated, levels, spot);
+        }
+
+        document.getElementById('spotPrice').addEventListener('change', updateData);
+    </script>
+</body>
+</html>
