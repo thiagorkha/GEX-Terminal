@@ -145,11 +145,15 @@
             </div>
 
             <div class="space-y-6">
-                <!-- Advanced Risk Logic -->
+                <!-- Monitor de Liquidez (Corrigido e Aprimorado) -->
                 <div class="glass-card p-6 rounded-xl border-b-4 border-yellow-600">
-                    <h3 class="text-sm font-bold text-yellow-300 uppercase mb-4">⚡ Monitor de Liquidez</h3>
+                    <h3 class="text-sm font-bold text-yellow-300 uppercase mb-4 flex items-center gap-2">
+                        ⚡ Monitor de Liquidez Professional
+                    </h3>
                     <div id="advancedInsights" class="space-y-4">
-                        <p class="text-slate-500 text-[11px] italic text-center">Importe dados para análise.</p>
+                        <div class="text-center py-4">
+                            <p class="text-slate-500 text-[11px] italic">Aguardando processamento de dados para análise de fluxo...</p>
+                        </div>
                     </div>
                 </div>
 
@@ -305,20 +309,57 @@
             const charmEst = (lv.totalDelta * 0.05) / lv.avgDte; 
             document.getElementById('charmHedgeValue').innerText = `${(charmEst/1e3).toFixed(1)}k / dia`;
 
-            // Insights
+            // Professional Liquidity Monitor Logic
             let insightHtml = `<div class="space-y-3">`;
-            if (callRank > 70 || putRank > 70) {
-                insightHtml += `<div class="p-3 bg-purple-500/10 border border-purple-500/20 rounded">
-                    <p class="text-[10px] text-purple-400 font-bold uppercase">IV RANK ALTO (${Math.max(callRank, putRank)})</p>
-                    <p class="text-[10px] text-slate-400 mt-1">Prêmios caros. O mercado precifica movimento iminente. Estratégias vendedoras de vol têm edge estatístico aqui.</p>
-                </div>`;
-            }
-            if (lv.totalGexNet < 0) {
-                insightHtml += `<div class="p-3 bg-red-500/10 border border-red-500/20 rounded">
-                    <p class="text-[10px] text-red-400 font-bold uppercase">ALERTA: GAMMA SQUEEZE</p>
-                    <p class="text-[10px] text-slate-400 mt-1">GEX negativo. Dealers precisam vender conforme cai e comprar conforme sobe, acelerando a volatilidade realizada.</p>
-                </div>`;
-            }
+            
+            // 1. IV Context
+            const ivClass = Math.max(callRank, putRank) > 70 ? 'text-purple-400' : 'text-blue-400';
+            insightHtml += `
+                <div class="p-3 bg-white/5 rounded border-l-2 border-blue-500">
+                    <p class="text-[9px] text-slate-500 uppercase font-bold">Estrutura de Volatilidade</p>
+                    <p class="text-[11px] font-semibold mt-1 ${ivClass}">
+                        IV Rank Médio: ${((callRank + putRank) / 2).toFixed(1)}% | 
+                        ${Math.max(callRank, putRank) > 75 ? 'Premium Atractiveness: HIGH' : 'Premium Atractiveness: NEUTRAL'}
+                    </p>
+                </div>
+            `;
+
+            // 2. Market Maker Positioning (Gamma Analysis)
+            const gexConcentration = Math.abs(lv.totalGexNet) / (df.reduce((a,b) => a + b.absGamma, 0) || 1);
+            const skewInfo = lv.totalGexNet > 0 ? "LONG GAMMA" : "SHORT GAMMA";
+            const gexColor = lv.totalGexNet > 0 ? "text-green-400" : "text-red-400";
+            
+            insightHtml += `
+                <div class="p-3 bg-white/5 rounded border-l-2 border-yellow-500">
+                    <p class="text-[9px] text-slate-500 uppercase font-bold">Exposição dos Market Makers</p>
+                    <p class="text-[11px] font-semibold mt-1 ${gexColor}">
+                        Regime: ${skewInfo} | Concentração: ${(gexConcentration * 100).toFixed(1)}%
+                    </p>
+                    <p class="text-[10px] text-slate-400 mt-1 leading-tight">
+                        ${lv.totalGexNet > 0 
+                            ? "Market Makers estão provendo liquidez. Volatilidade tende a ser contida e reversiva à média." 
+                            : "Risco de 'Negative Feedback Loop'. Movimentos direcionais tendem a ser exacerbados por hedges."}
+                    </p>
+                </div>
+            `;
+
+            // 3. Liquidity Gravity (Walls)
+            const distToCall = Math.abs((lv.callWall.strike - spot) / spot * 100).toFixed(1);
+            const distToPut = Math.abs((lv.putWall.strike - spot) / spot * 100).toFixed(1);
+            
+            insightHtml += `
+                <div class="p-3 bg-white/5 rounded border-l-2 border-cyan-500">
+                    <p class="text-[9px] text-slate-500 uppercase font-bold">Gravidade de Liquidez</p>
+                    <div class="flex justify-between mt-1 text-[10px]">
+                        <span class="text-green-400">Call Wall: +${distToCall}%</span>
+                        <span class="text-red-400">Put Wall: -${distToPut}%</span>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-1">
+                        Magnetismo do Pin: ${Math.abs(lv.gammaPin - spot) < (spot * 0.02) ? "FORTE (Proximidade Crítica)" : "FRACO"}
+                    </p>
+                </div>
+            `;
+
             document.getElementById('advancedInsights').innerHTML = insightHtml;
 
             // Strategy Tactic
