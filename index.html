@@ -50,6 +50,13 @@
         .input-dark:focus {
             color: #60a5fa;
         }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -89,7 +96,7 @@
             <div class="glass-card p-6 rounded-xl flex flex-col justify-center border-l-4 border-purple-500">
                 <span class="metric-label">GEX Total (Notional)</span>
                 <div id="totalGexValue" class="text-xl font-bold text-white mt-1">--</div>
-                <div id="gexStatus" class="text-[9px] uppercase font-bold mt-1">Aguardando dados...</div>
+                <div id="gexStatus" class="text-[9px] uppercase font-bold mt-1 text-slate-500">Aguardando dados...</div>
             </div>
         </div>
 
@@ -127,8 +134,9 @@
             </div>
         </div>
 
-        <!-- Charts and Insights -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Charts and Insights Area -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+            <!-- Central Chart -->
             <div class="lg:col-span-2 glass-card p-6 rounded-xl">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Visualização de Gregas</h3>
@@ -144,16 +152,27 @@
                 </div>
             </div>
 
+            <!-- Right Column Panels -->
             <div class="space-y-6">
-                <!-- Monitor de Liquidez (Corrigido e Aprimorado) -->
+                <!-- Monitor de Liquidez Professional -->
                 <div class="glass-card p-6 rounded-xl border-b-4 border-yellow-600">
                     <h3 class="text-sm font-bold text-yellow-300 uppercase mb-4 flex items-center gap-2">
-                        ⚡ Monitor de Liquidez Professional
+                        ⚡ Monitor de Liquidez
                     </h3>
                     <div id="advancedInsights" class="space-y-4">
                         <div class="text-center py-4">
-                            <p class="text-slate-500 text-[11px] italic">Aguardando processamento de dados para análise de fluxo...</p>
+                            <p class="text-slate-500 text-[11px] italic">Aguardando dados...</p>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Análise de Mercado (New Panel) -->
+                <div class="glass-card p-6 rounded-xl border-b-4 border-indigo-600">
+                    <h3 class="text-sm font-bold text-indigo-300 uppercase mb-4 flex items-center gap-2">
+                        🌐 Análise de Mercado
+                    </h3>
+                    <div id="marketAnalysis" class="text-[12px] text-slate-300 leading-relaxed space-y-3">
+                        <p class="text-slate-500 italic">Carregue um arquivo para gerar o relatório técnico.</p>
                     </div>
                 </div>
 
@@ -166,7 +185,7 @@
         </div>
 
         <!-- Table -->
-        <div class="mt-8 glass-card rounded-xl overflow-hidden">
+        <div class="glass-card rounded-xl overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
                     <thead class="bg-white/5 text-slate-500 text-[9px] uppercase font-bold">
@@ -280,7 +299,8 @@
                 totalTheta: df.reduce((a, b) => a + b.totalTheta, 0),
                 totalDelta: df.reduce((a, b) => a + b.totalDelta, 0),
                 totalGexNet: df.reduce((a, b) => a + b.totalGex, 0),
-                avgDte: df.reduce((a, b) => a + b.dte, 0) / df.length
+                avgDte: df.reduce((a, b) => a + b.dte, 0) / df.length,
+                totalAbsGex: df.reduce((a, b) => a + b.absGamma, 0)
             };
 
             // Notional GEX Info
@@ -290,11 +310,9 @@
             if(lv.totalGexNet > 0) {
                 gexEl.className = "text-xl font-bold text-green-400 mt-1";
                 gexStatusEl.innerText = "Dealers Long Gamma (Estável)";
-                gexStatusEl.className = "text-[9px] uppercase font-bold mt-1 text-green-500/80";
             } else {
                 gexEl.className = "text-xl font-bold text-red-400 mt-1";
                 gexStatusEl.innerText = "Dealers Short Gamma (Explosivo)";
-                gexStatusEl.className = "text-[9px] uppercase font-bold mt-1 text-red-500/80";
             }
 
             // Metric Cards
@@ -311,21 +329,18 @@
 
             // Professional Liquidity Monitor Logic
             let insightHtml = `<div class="space-y-3">`;
-            
-            // 1. IV Context
             const ivClass = Math.max(callRank, putRank) > 70 ? 'text-purple-400' : 'text-blue-400';
             insightHtml += `
                 <div class="p-3 bg-white/5 rounded border-l-2 border-blue-500">
                     <p class="text-[9px] text-slate-500 uppercase font-bold">Estrutura de Volatilidade</p>
                     <p class="text-[11px] font-semibold mt-1 ${ivClass}">
                         IV Rank Médio: ${((callRank + putRank) / 2).toFixed(1)}% | 
-                        ${Math.max(callRank, putRank) > 75 ? 'Premium Atractiveness: HIGH' : 'Premium Atractiveness: NEUTRAL'}
+                        ${Math.max(callRank, putRank) > 75 ? 'Atratividade: ALTA' : 'Atratividade: NEUTRA'}
                     </p>
                 </div>
             `;
 
-            // 2. Market Maker Positioning (Gamma Analysis)
-            const gexConcentration = Math.abs(lv.totalGexNet) / (df.reduce((a,b) => a + b.absGamma, 0) || 1);
+            const gexConcentration = Math.abs(lv.totalGexNet) / (lv.totalAbsGex || 1);
             const skewInfo = lv.totalGexNet > 0 ? "LONG GAMMA" : "SHORT GAMMA";
             const gexColor = lv.totalGexNet > 0 ? "text-green-400" : "text-red-400";
             
@@ -335,15 +350,9 @@
                     <p class="text-[11px] font-semibold mt-1 ${gexColor}">
                         Regime: ${skewInfo} | Concentração: ${(gexConcentration * 100).toFixed(1)}%
                     </p>
-                    <p class="text-[10px] text-slate-400 mt-1 leading-tight">
-                        ${lv.totalGexNet > 0 
-                            ? "Market Makers estão provendo liquidez. Volatilidade tende a ser contida e reversiva à média." 
-                            : "Risco de 'Negative Feedback Loop'. Movimentos direcionais tendem a ser exacerbados por hedges."}
-                    </p>
                 </div>
             `;
 
-            // 3. Liquidity Gravity (Walls)
             const distToCall = Math.abs((lv.callWall.strike - spot) / spot * 100).toFixed(1);
             const distToPut = Math.abs((lv.putWall.strike - spot) / spot * 100).toFixed(1);
             
@@ -354,28 +363,48 @@
                         <span class="text-green-400">Call Wall: +${distToCall}%</span>
                         <span class="text-red-400">Put Wall: -${distToPut}%</span>
                     </div>
-                    <p class="text-[10px] text-slate-400 mt-1">
-                        Magnetismo do Pin: ${Math.abs(lv.gammaPin - spot) < (spot * 0.02) ? "FORTE (Proximidade Crítica)" : "FRACO"}
-                    </p>
                 </div>
             `;
-
             document.getElementById('advancedInsights').innerHTML = insightHtml;
+
+            // --- New: Market Analysis Report ---
+            let report = "";
+            const isLongGamma = lv.totalGexNet > 0;
+            const nearWall = (Math.abs(spot - lv.callWall.strike) / spot < 0.01) || (Math.abs(spot - lv.putWall.strike) / spot < 0.01);
+            const volatilityRegime = Math.max(callRank, putRank) > 60 ? "Alta" : "Normalizada";
+
+            report += `<p>O mercado apresenta um regime de <strong>${isLongGamma ? 'Gamma Positivo' : 'Gamma Negativo'}</strong>. `;
+            if (isLongGamma) {
+                report += `Neste cenário, os market makers atuam como estabilizadores, vendendo forças e comprando fraquezas para manter seus deltas neutros. A volatilidade realizada tende a ser inferior à implícita.</p>`;
+            } else {
+                report += `Este é um ambiente de alta fragilidade. Market makers precisam "correr atrás" do preço para ajustar seus hedges, o que pode gerar movimentos parabólicos em caso de quebra de suportes ou resistências.</p>`;
+            }
+
+            report += `<p><strong>Comportamento dos MM:</strong> `;
+            if (nearWall) {
+                report += `O preço está testando uma 'Parede' importante. Espere defesa agressiva de strikes. Se o spot ultrapassar a Call Wall em ${lv.callWall.strike.toFixed(2)}, poderemos ver um <em>short squeeze</em> devido ao hedge forçado de deltas curtos.</p>`;
+            } else {
+                report += `A ausência de paredes imediatas sugere uma zona de vácuo de liquidez entre ${lv.putWall.strike.toFixed(0)} e ${lv.callWall.strike.toFixed(0)}. Os MM devem adotar uma postura de "Delta Hedging" passivo até que o preço se aproxime do Gamma Pin em ${lv.gammaPin.toFixed(2)}.</p>`;
+            }
+
+            report += `<p><strong>Expectativa:</strong> Com o IV Rank em nível ${volatilityRegime}, a estratégia institucional dominante deve ser a ${volatilityRegime === "Alta" ? "venda de volatilidade para capturar o esmagamento do prêmio (IV Crush)" : "proteção de cauda via opções OTM barato"}.</p>`;
+            
+            document.getElementById('marketAnalysis').innerHTML = report;
 
             // Strategy Tactic
             let stratHtml = "";
             if (lv.avgDte < 5) {
                 stratHtml = createStratCard("Pinning Strategy", "Vencimento curto + Gamma Pin. O preço tende a orbitar o Pin.", "yellow", 
-                `Exemplo: Iron Butterfly no strike ${lv.gammaPin.toFixed(0)} para lucrar com a imobilização do preço.`);
+                `Exemplo: Iron Butterfly no strike ${lv.gammaPin.toFixed(0)}.`);
             } else if (callRank > 80 && putRank > 80) {
                 stratHtml = createStratCard("Short Volatility", "IV Rank extremo favorece coleta de prêmios.", "purple",
-                `Exemplo: Venda de Strangle (distante das Walls) nos strikes ${lv.putWall.strike.toFixed(0)} e ${lv.callWall.strike.toFixed(0)}.`);
+                `Exemplo: Venda de Strangle fora das Walls em ${lv.putWall.strike.toFixed(0)} e ${lv.callWall.strike.toFixed(0)}.`);
             } else if (lv.totalGexNet < 0) {
                 stratHtml = createStratCard("Long Gamma / Convexity", "Comprar vol barata antes da explosão.", "red",
-                `Exemplo: Compra de Straddle no strike ${lv.gammaFlip.toFixed(0)} visando lucrar com o aumento da vol realizada.`);
+                `Exemplo: Compra de Straddle no strike ${lv.gammaFlip.toFixed(0)}.`);
             } else {
                 stratHtml = createStratCard("Trend Following", "GEX positivo providencia suporte/resistência nas Walls.", "blue",
-                `Exemplo: Trava de Alta (Bull Call Spread) buscando o alvo na Call Wall em ${lv.callWall.strike.toFixed(0)}.`);
+                `Exemplo: Bull Call Spread visando alvo na Call Wall em ${lv.callWall.strike.toFixed(0)}.`);
             }
             document.getElementById('tacticContent').innerHTML = stratHtml;
 
