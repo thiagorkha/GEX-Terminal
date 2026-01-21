@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>QuantGEX Terminal | Opções & Gamma Pro</title>
+    <title>QuantGEX Terminal | Full Greeks Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
@@ -26,19 +26,18 @@
             border: none;
             cursor: pointer;
             margin-right: 1rem;
-            transition: all 0.2s;
         }
         .chart-container {
             position: relative;
-            height: 450px;
+            height: 400px;
             width: 100%;
         }
-        .status-pill {
-            padding: 2px 8px;
-            border-radius: 9999px;
+        .metric-label {
             font-size: 10px;
-            font-weight: bold;
             text-transform: uppercase;
+            color: #94a3b8;
+            font-weight: 700;
+            letter-spacing: 0.05em;
         }
     </style>
 </head>
@@ -48,119 +47,109 @@
         <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-3xl font-bold text-blue-400 flex items-center gap-2">
-                    📊 QuantGEX Terminal <span class="text-xs font-mono bg-blue-500/20 px-2 py-1 rounded text-blue-300">v4.0 GREEKS PRO</span>
+                    📊 QuantGEX Terminal <span class="text-xs font-mono bg-blue-500/20 px-2 py-1 rounded text-blue-300">v4.5 FULL GREEKS</span>
                 </h1>
-                <p class="text-slate-400">Análise de IV, DTE e Microestrutura de Market Making</p>
+                <p class="text-slate-400">Análise de Fluxo Profissional: Delta, Gamma, Theta, Vega & Charm</p>
             </div>
             <div class="flex gap-4">
-                <div class="glass-card p-3 rounded-lg text-center min-w-[120px]">
-                    <span class="block text-[9px] uppercase text-slate-400 mb-1 font-bold">Spot</span>
-                    <input type="number" id="spotPrice" value="100.00" step="0.01" class="bg-transparent text-lg font-bold w-full text-center outline-none text-white focus:text-blue-400 transition-colors">
-                </div>
-                <div class="glass-card p-3 rounded-lg text-center min-w-[120px]">
-                    <span class="block text-[9px] uppercase text-slate-400 mb-1 font-bold">VIX / IV Média</span>
-                    <input type="number" id="avgIv" value="25" step="0.1" class="bg-transparent text-lg font-bold w-full text-center outline-none text-white focus:text-blue-400 transition-colors">
+                <div class="glass-card p-3 rounded-lg text-center min-w-[140px]">
+                    <span class="metric-label">Preço Spot</span>
+                    <input type="number" id="spotPrice" value="100.00" step="0.01" class="bg-transparent text-lg font-bold w-full text-center outline-none text-white focus:text-blue-400">
                 </div>
             </div>
         </header>
 
-        <!-- Configuration & Import -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="md:col-span-3 glass-card p-6 rounded-xl border-l-4 border-blue-500">
-                <div class="flex justify-between items-start mb-4">
-                    <h2 class="text-sm font-semibold text-blue-300 uppercase tracking-wider">📁 Importar Dados Pro</h2>
-                    <span class="text-[10px] text-slate-500 font-mono">Suporte: IV, Vencimento, Delta, Gamma, OI</span>
-                </div>
+        <!-- Main Dashboard -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-8">
+            <div class="lg:col-span-3 glass-card p-6 rounded-xl border-l-4 border-blue-500">
+                <h2 class="text-sm font-semibold text-blue-300 uppercase mb-4">📂 Importar Dados (Colunas: Strike, Delta, Gamma, Theta, Vega, IV, DTE, OI)</h2>
                 <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-slate-400">
             </div>
-            <div class="glass-card p-6 rounded-xl flex flex-col justify-center">
-                <span class="text-xs text-slate-400 uppercase font-bold">Regime de Volatilidade</span>
-                <div id="volRegimeValue" class="text-xl font-bold text-white mt-1">Normal</div>
-                <div id="vannaBadge" class="mt-2 status-pill bg-slate-800 text-slate-400 text-center">Aguardando IV...</div>
+            <div class="glass-card p-6 rounded-xl flex flex-col justify-center border-l-4 border-purple-500">
+                <span class="metric-label">Exposição Vega Total</span>
+                <div id="totalVegaValue" class="text-xl font-bold text-purple-400 mt-1">--</div>
+                <div class="text-[9px] text-slate-500 mt-1">Risco financeiro por +1% IV</div>
             </div>
         </div>
 
-        <!-- Metric Cards -->
+        <!-- Secondary Metrics Row -->
         <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
-            <div class="glass-card p-4 rounded-xl border-t-2 border-green-500">
-                <span class="text-[9px] text-slate-500 uppercase block font-bold">Call Wall</span>
-                <div id="callWallValue" class="text-lg font-bold text-green-400">--</div>
-            </div>
-            <div class="glass-card p-4 rounded-xl border-t-2 border-red-500">
-                <span class="text-[9px] text-slate-500 uppercase block font-bold">Put Wall</span>
-                <div id="putWallValue" class="text-lg font-bold text-red-400">--</div>
+            <div class="glass-card p-4 rounded-xl border-t-2 border-emerald-500">
+                <span class="metric-label">Theta Total (Net)</span>
+                <div id="totalThetaValue" class="text-lg font-bold text-emerald-400">--</div>
             </div>
             <div class="glass-card p-4 rounded-xl border-t-2 border-orange-500">
-                <span class="text-[9px] text-slate-500 uppercase block font-bold">Gamma Flip</span>
+                <span class="metric-label">Gamma Flip</span>
                 <div id="gammaFlipValue" class="text-lg font-bold text-orange-400">--</div>
             </div>
+            <div class="glass-card p-4 rounded-xl border-t-2 border-blue-500">
+                <span class="metric-label">Hedge de Charm</span>
+                <div id="charmHedgeValue" class="text-lg font-bold text-blue-400">--</div>
+            </div>
+            <div class="glass-card p-4 rounded-xl border-t-2 border-red-500">
+                <span class="metric-label">Put Wall</span>
+                <div id="putWallValue" class="text-lg font-bold text-red-400">--</div>
+            </div>
+             <div class="glass-card p-4 rounded-xl border-t-2 border-green-500">
+                <span class="metric-label">Call Wall</span>
+                <div id="callWallValue" class="text-lg font-bold text-green-400">--</div>
+            </div>
             <div class="glass-card p-4 rounded-xl border-t-2 border-cyan-500">
-                <span class="text-[9px] text-slate-500 uppercase block font-bold">DTE Médio</span>
-                <div id="avgDteValue" class="text-lg font-bold text-cyan-400">--</div>
-            </div>
-            <div class="glass-card p-4 rounded-xl border-t-2 border-purple-500">
-                <span class="text-[9px] text-slate-500 uppercase block font-bold">Skew Absoluto</span>
-                <div id="skewValue" class="text-lg font-bold text-purple-400">--</div>
-            </div>
-            <div class="glass-card p-4 rounded-xl border-t-2 border-yellow-500">
-                <span class="text-[9px] text-slate-500 uppercase block font-bold">Total Delta Net</span>
-                <div id="totalDeltaValue" class="text-lg font-bold text-yellow-400">--</div>
+                <span class="metric-label">DTE Dominante</span>
+                <div id="dominantDteValue" class="text-lg font-bold text-cyan-400">--</div>
             </div>
         </div>
 
+        <!-- Charts and Insights -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Visual Analytics -->
             <div class="lg:col-span-2 glass-card p-6 rounded-xl">
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                        <span class="w-2 h-2 bg-blue-500 rounded-full"></span> Distribuição de Greeks e IV
-                    </h3>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Exposição de Gregas por Strike</h3>
+                    <select id="chartMetric" class="bg-slate-800 text-[10px] rounded px-2 py-1 outline-none border border-slate-700">
+                        <option value="totalGex">Gamma Exposure (GEX)</option>
+                        <option value="totalVega">Vega Exposure</option>
+                        <option value="totalTheta">Theta (Time Decay)</option>
+                        <option value="totalDelta">Notional Delta</option>
+                    </select>
                 </div>
                 <div class="chart-container">
-                    <canvas id="gexChart"></canvas>
+                    <canvas id="mainChart"></canvas>
                 </div>
             </div>
 
-            <!-- Tactics & Greeks Panel -->
             <div class="space-y-6">
-                <!-- Vanna/Charm Insights -->
-                <div class="glass-card p-6 rounded-xl border-b-4 border-indigo-600">
-                    <h3 class="text-sm font-bold text-indigo-300 uppercase mb-4">🌪️ Dinâmica de IV & Tempo</h3>
-                    <div id="greeksInsights" class="space-y-4">
-                        <p class="text-slate-500 text-[11px] italic">Importe dados de IV para ver a sensibilidade do hedge.</p>
+                <!-- Advanced Risk Logic -->
+                <div class="glass-card p-6 rounded-xl border-b-4 border-yellow-600">
+                    <h3 class="text-sm font-bold text-yellow-300 uppercase mb-4">⚡ Monitor de Liquidez & Charm</h3>
+                    <div id="advancedInsights" class="space-y-4">
+                        <p class="text-slate-500 text-[11px] italic text-center">Aguardando processamento de gregas...</p>
                     </div>
                 </div>
 
                 <!-- Strategic Tactics -->
-                <div class="glass-card p-6 rounded-xl border-b-4 border-emerald-600">
-                    <h3 class="text-sm font-bold text-emerald-300 uppercase mb-4">🎯 Posicionamento Tático</h3>
-                    <div id="tacticContent" class="space-y-3">
-                        <!-- Conteúdo dinâmico -->
-                    </div>
+                <div class="glass-card p-6 rounded-xl border-b-4 border-cyan-600">
+                    <h3 class="text-sm font-bold text-cyan-300 uppercase mb-4">🎯 Estratégia Recomendada</h3>
+                    <div id="tacticContent" class="space-y-3"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Detailed Panel -->
+        <!-- Table -->
         <div class="mt-8 glass-card rounded-xl overflow-hidden">
-            <div class="p-4 border-b border-white/10 flex justify-between items-center bg-white/5">
-                <h3 class="font-bold text-xs uppercase text-slate-400 tracking-wider">Monitor de Greeks por Strike</h3>
-            </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-left">
-                    <thead class="bg-black/40 text-slate-500 text-[9px] uppercase font-bold">
+                    <thead class="bg-white/5 text-slate-500 text-[9px] uppercase font-bold">
                         <tr>
                             <th class="p-4">Strike</th>
-                            <th class="p-4">IV (%)</th>
                             <th class="p-4">GEX Net</th>
-                            <th class="p-4">Delta Net</th>
-                            <th class="p-4">Vencimento (DTE)</th>
-                            <th class="p-4">Semsibilidade (Gamma/IV)</th>
+                            <th class="p-4">Delta Net (M)</th>
+                            <th class="p-4">Theta (Diário)</th>
+                            <th class="p-4">Vega (1% IV)</th>
+                            <th class="p-4">DTE</th>
+                            <th class="p-4">IV %</th>
                         </tr>
                     </thead>
-                    <tbody id="dataTable" class="divide-y divide-white/5 font-mono text-[11px]">
-                        <tr><td colspan="6" class="p-8 text-center text-slate-500 italic">Nenhum dado processado</td></tr>
-                    </tbody>
+                    <tbody id="dataTable" class="divide-y divide-white/5 font-mono text-[11px]"></tbody>
                 </table>
             </div>
         </div>
@@ -170,34 +159,30 @@
         let chartInstance = null;
         let lastRawData = [];
 
-        // UI Listeners
         document.getElementById('spotPrice').addEventListener('change', updateData);
-        document.getElementById('avgIv').addEventListener('change', updateData);
+        document.getElementById('chartMetric').addEventListener('change', updateData);
 
-        // --- EXCEL PARSER ---
         document.getElementById('excelInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
+            reader.onload = (e) => {
+                const workbook = XLSX.read(new Uint8Array(e.target.result), { type: 'array' });
                 const json = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-                processImportedData(json);
+                processData(json);
             };
             reader.readAsArrayBuffer(file);
         });
 
         function parseNum(val) {
             if (val === undefined || val === null || val === "") return 0;
-            if (typeof val === 'number') return val;
             let clean = val.toString().replace(/R\$/g, '').replace(/\s/g, '').replace('%', '');
             if (clean.includes(',') && clean.includes('.')) clean = clean.replace(/\./g, '').replace(',', '.');
             else clean = clean.replace(',', '.');
             return parseFloat(clean) || 0;
         }
 
-        function processImportedData(json) {
+        function processData(json) {
             lastRawData = json.map(row => {
                 const findKey = (list) => {
                     const keys = Object.keys(row);
@@ -210,129 +195,113 @@
                     oi: parseNum(row[findKey(['oi', 'open interest', 'aberto', 'contratos'])]),
                     gamma: parseNum(row[findKey(['gamma', 'gama', 'gex'])]),
                     delta: parseNum(row[findKey(['delta', 'dlt'])]),
-                    iv: parseNum(row[findKey(['iv', 'vol implícita', 'volatilidade', 'implied vol'])]),
-                    dte: parseNum(row[findKey(['dte', 'dias vencimento', 'prazo', 'vencimento'])]) || 30
+                    theta: parseNum(row[findKey(['theta', 'teta'])]),
+                    vega: parseNum(row[findKey(['vega'])]),
+                    iv: parseNum(row[findKey(['iv', 'volatilidade'])]),
+                    dte: parseNum(row[findKey(['dte', 'prazo', 'vencimento'])])
                 };
             }).filter(r => r.strike > 0);
             updateData();
         }
 
-        // --- QUANT ENGINE v4.0 ---
-        function calculateMetrics(data, spot) {
+        function updateData() {
+            if (!lastRawData.length) return;
+            const spot = parseFloat(document.getElementById('spotPrice').value);
             const strikeMap = {};
-            data.forEach(row => {
+
+            lastRawData.forEach(row => {
                 if (!strikeMap[row.strike]) {
-                    strikeMap[row.strike] = { strike: row.strike, gexCall: 0, gexPut: 0, deltaCall: 0, deltaPut: 0, ivSum: 0, ivCount: 0, dte: 0 };
+                    strikeMap[row.strike] = { strike: row.strike, totalGex: 0, totalDelta: 0, totalTheta: 0, totalVega: 0, iv: row.iv, dte: row.dte, gCall: 0, gPut: 0 };
                 }
-                const gexVal = row.gamma * row.oi * 100 * spot;
-                const deltaVal = row.delta * row.oi * 100;
+                const mult = 100 * spot; // Multiplicador nocional (assumindo lote de 100)
+                const gex = row.gamma * row.oi * mult;
+                const delta = row.delta * row.oi * mult;
+                const theta = row.theta * row.oi * 100; // Theta é por contrato
+                const vega = row.vega * row.oi * 100;
+
+                const isCall = row.tipo.includes('c');
+                strikeMap[row.strike].totalGex += isCall ? gex : -gex;
+                strikeMap[row.strike].totalDelta += isCall ? delta : delta; // Delta de Put já costuma ser negativo
+                strikeMap[row.strike].totalTheta += isCall ? theta : theta;
+                strikeMap[row.strike].totalVega += vega;
                 
-                if (row.tipo.includes('c')) {
-                    strikeMap[row.strike].gexCall += gexVal;
-                    strikeMap[row.strike].deltaCall += deltaVal;
-                } else {
-                    strikeMap[row.strike].gexPut -= gexVal;
-                    strikeMap[row.strike].deltaPut += deltaVal;
-                }
-                strikeMap[row.strike].ivSum += row.iv;
-                strikeMap[row.strike].ivCount++;
-                strikeMap[row.strike].dte = row.dte;
+                if(isCall) strikeMap[row.strike].gCall += gex;
+                else strikeMap[row.strike].gPut -= gex;
             });
 
-            return Object.values(strikeMap).map(s => {
-                const avgIv = s.ivCount > 0 ? s.ivSum / s.ivCount : 0;
-                const totalGex = s.gexCall + s.gexPut;
-                const totalDelta = s.deltaCall + s.deltaPut;
-                return { ...s, avgIv, totalGex, totalDelta };
-            }).sort((a,b) => a.strike - b.strike);
+            const df = Object.values(strikeMap).sort((a,b) => a.strike - b.strike);
+            renderDashboard(df, spot);
         }
 
-        function updateUI(df, spot) {
-            if (!df.length) return;
+        function renderDashboard(df, spot) {
+            const lv = {
+                callWall: df.reduce((a, b) => a.gCall > b.gCall ? a : b).strike,
+                putWall: df.reduce((a, b) => a.gPut < b.gPut ? a : b).strike,
+                gammaFlip: df.reduce((a, b) => Math.abs(a.totalGex) < Math.abs(b.totalGex) ? a : b).strike,
+                totalVega: df.reduce((a, b) => a + b.totalVega, 0),
+                totalTheta: df.reduce((a, b) => a + b.totalTheta, 0),
+                totalDelta: df.reduce((a, b) => a + b.totalDelta, 0),
+                avgDte: df.reduce((a, b) => a + b.dte, 0) / df.length
+            };
 
-            const callWall = df.reduce((prev, curr) => (curr.gexCall > prev.gexCall) ? curr : prev).strike;
-            const putWall = df.reduce((prev, curr) => (curr.gexPut < prev.gexPut) ? curr : prev).strike;
-            const gammaFlip = df.reduce((prev, curr) => (Math.abs(curr.totalGex) < Math.abs(prev.totalGex)) ? curr : prev).strike;
-            const avgDte = df.reduce((a, b) => a + b.dte, 0) / df.length;
-            const totalDelta = df.reduce((a, b) => a + b.totalDelta, 0);
+            // Update UI
+            document.getElementById('totalVegaValue').innerText = `R$ ${(lv.totalVega/1e3).toFixed(1)}k`;
+            document.getElementById('totalThetaValue').innerText = `R$ ${(lv.totalTheta/1e3).toFixed(1)}k`;
+            document.getElementById('callWallValue').innerText = `$ ${lv.callWall.toFixed(2)}`;
+            document.getElementById('putWallValue').innerText = `$ ${lv.putWall.toFixed(2)}`;
+            document.getElementById('gammaFlipValue').innerText = `$ ${lv.gammaFlip.toFixed(2)}`;
+            document.getElementById('dominantDteValue').innerText = `${lv.avgDte.toFixed(0)}d`;
 
-            // Skew calculation (IV Put vs IV Call around ATM)
-            const atmStrike = df.reduce((prev, curr) => Math.abs(curr.strike - spot) < Math.abs(prev.strike - spot) ? curr : prev);
-            document.getElementById('skewValue').innerText = `${atmStrike.avgIv.toFixed(1)}%`;
+            // Charm Hedge Logic: Como o Delta muda com o tempo
+            // Dealers Long Gamma tendem a comprar delta conforme o tempo passa
+            const charmEst = (lv.totalDelta * 0.05) / lv.avgDte; 
+            document.getElementById('charmHedgeValue').innerText = `${(charmEst/1e3).toFixed(1)}k / dia`;
+
+            // Advanced Insights
+            let insightHtml = `<div class="space-y-3">`;
+            const netGex = df.reduce((a,b) => a + b.totalGex, 0);
             
-            document.getElementById('callWallValue').innerText = `$ ${callWall.toFixed(2)}`;
-            document.getElementById('putWallValue').innerText = `$ ${putWall.toFixed(2)}`;
-            document.getElementById('gammaFlipValue').innerText = `$ ${gammaFlip.toFixed(2)}`;
-            document.getElementById('avgDteValue').innerText = `${avgDte.toFixed(0)} dias`;
-            document.getElementById('totalDeltaValue').innerText = `${(totalDelta/1e6).toFixed(1)}M`;
-
-            // Volatilidade Regime Logic
-            const ivInput = parseFloat(document.getElementById('avgIv').value);
-            const volRegime = document.getElementById('volRegimeValue');
-            const vannaBadge = document.getElementById('vannaBadge');
-            
-            if (ivInput > 30) {
-                volRegime.innerText = "Alta Vol";
-                volRegime.className = "text-xl font-bold text-red-400 mt-1";
-                vannaBadge.innerText = "⚠️ Vanna Positivo: Risco de Vol Crush";
-                vannaBadge.className = "mt-2 status-pill bg-red-500/20 text-red-400 text-center";
-            } else {
-                volRegime.innerText = "Baixa Vol";
-                volRegime.className = "text-xl font-bold text-green-400 mt-1";
-                vannaBadge.innerText = "Charm Ativo: Decaimento de Delta";
-                vannaBadge.className = "mt-2 status-pill bg-green-500/20 text-green-400 text-center";
-            }
-
-            // --- GREEKS INSIGHTS ---
-            let greeksHtml = `<div class="space-y-3">`;
-            if (avgDte < 7) {
-                greeksHtml += `<div class="p-3 bg-red-500/10 border border-red-500/20 rounded">
-                    <p class="text-[10px] text-red-400 font-bold uppercase">💣 Risco de Gamma (Fim de Jogo)</p>
-                    <p class="text-[10px] text-slate-400 mt-1">Vencimento muito próximo. Movimentos no Spot forçarão re-hedges violentos dos dealers.</p>
+            if (netGex < 0) {
+                insightHtml += `<div class="p-3 bg-red-500/10 border border-red-500/20 rounded">
+                    <p class="text-[10px] text-red-400 font-bold uppercase">ALERTA: VOLATILITY SQUEEZE</p>
+                    <p class="text-[10px] text-slate-400 mt-1">Regime de GEX Negativo. Com Vega de ${ (lv.totalVega/1e3).toFixed(1) }k, um aumento de 1% na IV forçará os dealers a venderem deltas agressivamente.</p>
                 </div>`;
             } else {
-                greeksHtml += `<div class="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded">
-                    <p class="text-[10px] text-indigo-400 font-bold uppercase">⏳ Dominância de Theta/Charm</p>
-                    <p class="text-[10px] text-slate-400 mt-1">Exposição estável. O tempo é o maior fator de mudança nos deltas dos MMs hoje.</p>
+                insightHtml += `<div class="p-3 bg-green-500/10 border border-green-500/20 rounded">
+                    <p class="text-[10px] text-green-400 font-bold uppercase">REGIME: STICKY PRICE</p>
+                    <p class="text-[10px] text-slate-400 mt-1">Dealers estão coletando R$ ${ (lv.totalTheta/1e3).toFixed(1) }k de Theta por dia. Eles defenderão as Walls para manter o preço lateral.</p>
                 </div>`;
             }
-            
-            const netGex = df.reduce((a, b) => a + b.totalGex, 0);
-            if (netGex < 0 && ivInput > 25) {
-                greeksHtml += `<div class="p-3 bg-orange-500/10 border border-orange-500/20 rounded">
-                    <p class="text-[10px] text-orange-400 font-bold uppercase">📉 Feedback Loop Negativo</p>
-                    <p class="text-[10px] text-slate-400 mt-1">Short Gamma + Alta IV. Qualquer queda de preço aumenta a IV, que por sua vez aumenta a necessidade de venda dos dealers (Vanna).</p>
-                </div>`;
-            }
-            document.getElementById('greeksInsights').innerHTML = greeksHtml;
+            document.getElementById('advancedInsights').innerHTML = insightHtml;
 
-            // --- TACTICS ---
-            let tacticHtml = `<div class="space-y-3">`;
-            if (avgDte < 5 && netGex > 0) {
-                tacticHtml += createTacticCard("0DTE GAMMA SCALPING", "Aproveite a estabilidade para vender vol curta ou operar reversões nas Walls.", "emerald");
-            } else if (ivInput > 35) {
-                tacticHtml += createTacticCard("VOLATILITY SHORT (VEGA)", "Venda de travas de linha (Credit Spreads) para capturar o colapso da IV após o evento.", "blue");
+            // Strategy
+            let stratHtml = "";
+            if (lv.avgDte < 5) {
+                stratHtml = createStratCard("Gamma Scalp", "Vencimento curto. Opere reversões na Put Wall.", "emerald");
+            } else if (lv.totalVega > 10000) {
+                stratHtml = createStratCard("Vega Short", "Venda de IV alta com DTE de 20-30 dias.", "purple");
             } else {
-                tacticHtml += createTacticCard("LONG CONVEXITY", "Compra de Strangles ou Puts longas. Risco de cauda barato devido à IV baixa.", "purple");
+                stratHtml = createStratCard("Bull/Bear Spread", "Estratégia direcional focada no Gamma Flip.", "blue");
             }
-            document.getElementById('tacticContent').innerHTML = tacticHtml;
+            document.getElementById('tacticContent').innerHTML = stratHtml;
 
             // Table
-            document.getElementById('dataTable').innerHTML = df.map(row => `
-                <tr class="hover:bg-white/5 transition">
-                    <td class="p-4 font-bold text-slate-300">${row.strike.toFixed(2)}</td>
-                    <td class="p-4 text-purple-400">${row.avgIv.toFixed(1)}%</td>
-                    <td class="p-4 ${row.totalGex >= 0 ? 'text-green-400' : 'text-red-400'}">${(row.totalGex/1e3).toFixed(1)}k</td>
-                    <td class="p-4 text-yellow-500">${(row.totalDelta/1e3).toFixed(1)}k</td>
-                    <td class="p-4 text-cyan-400 font-mono">${row.dte}d</td>
-                    <td class="p-4 text-slate-500 text-[10px]">${(Math.abs(row.totalGex)/row.avgIv).toFixed(2)}</td>
+            document.getElementById('dataTable').innerHTML = df.map(r => `
+                <tr class="hover:bg-white/5">
+                    <td class="p-4 font-bold text-slate-300">${r.strike.toFixed(2)}</td>
+                    <td class="p-4 ${r.totalGex >= 0 ? 'text-green-400' : 'text-red-400'}">${(r.totalGex/1e3).toFixed(1)}k</td>
+                    <td class="p-4 text-yellow-500">${(r.totalDelta/1e6).toFixed(2)}M</td>
+                    <td class="p-4 text-emerald-400">${(r.totalTheta/1e3).toFixed(1)}k</td>
+                    <td class="p-4 text-purple-400">${(r.totalVega/1e3).toFixed(1)}k</td>
+                    <td class="p-4 text-cyan-400">${r.dte}d</td>
+                    <td class="p-4 text-slate-500">${r.iv.toFixed(1)}%</td>
                 </tr>
             `).join('');
 
             renderChart(df, spot);
         }
 
-        function createTacticCard(title, desc, color) {
+        function createStratCard(title, desc, color) {
             return `<div class="p-3 bg-${color}-500/10 rounded border border-${color}-500/30">
                 <p class="text-[11px] text-${color}-400 font-bold uppercase">${title}</p>
                 <p class="text-[10px] text-slate-300 leading-tight mt-1">${desc}</p>
@@ -340,48 +309,29 @@
         }
 
         function renderChart(df, spot) {
-            const ctx = document.getElementById('gexChart').getContext('2d');
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            const metric = document.getElementById('chartMetric').value;
             if (chartInstance) chartInstance.destroy();
             
             chartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: df.map(r => r.strike),
-                    datasets: [
-                        {
-                            label: 'Net GEX',
-                            data: df.map(r => r.totalGex),
-                            backgroundColor: df.map(r => r.totalGex >= 0 ? 'rgba(16, 185, 129, 0.5)' : 'rgba(239, 68, 68, 0.5)'),
-                            yAxisID: 'y'
-                        },
-                        {
-                            label: 'IV %',
-                            type: 'line',
-                            data: df.map(r => r.avgIv),
-                            borderColor: '#a855f7',
-                            borderWidth: 2,
-                            pointRadius: 2,
-                            yAxisID: 'y1'
-                        }
-                    ]
+                    datasets: [{
+                        label: metric,
+                        data: df.map(r => r[metric]),
+                        backgroundColor: df.map(r => r[metric] >= 0 ? 'rgba(59, 130, 246, 0.5)' : 'rgba(239, 68, 68, 0.5)'),
+                    }]
                 },
                 options: {
                     maintainAspectRatio: false,
                     scales: {
-                        x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 } } },
                         y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b', font: { size: 9 } } },
-                        y1: { position: 'right', grid: { display: false }, ticks: { color: '#a855f7', font: { size: 9 } } }
+                        x: { ticks: { color: '#64748b', font: { size: 9 } } }
                     },
                     plugins: { legend: { display: false } }
                 }
             });
-        }
-
-        function updateData() {
-            if (!lastRawData.length) return;
-            const spot = parseFloat(document.getElementById('spotPrice').value);
-            const calculated = calculateMetrics(lastRawData, spot);
-            updateUI(calculated, spot);
         }
     </script>
 </body>
