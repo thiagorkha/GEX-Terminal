@@ -129,7 +129,9 @@
                 <!-- Strategic Tactics -->
                 <div class="glass-card p-6 rounded-xl border-b-4 border-cyan-600">
                     <h3 class="text-sm font-bold text-cyan-300 uppercase mb-4">🎯 Estratégia Recomendada</h3>
-                    <div id="tacticContent" class="space-y-3"></div>
+                    <div id="tacticContent" class="space-y-3">
+                        <p class="text-slate-500 text-[11px] italic text-center">Importe dados para ver sugestões.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -213,15 +215,15 @@
                 if (!strikeMap[row.strike]) {
                     strikeMap[row.strike] = { strike: row.strike, totalGex: 0, totalDelta: 0, totalTheta: 0, totalVega: 0, iv: row.iv, dte: row.dte, gCall: 0, gPut: 0 };
                 }
-                const mult = 100 * spot; // Multiplicador nocional (assumindo lote de 100)
+                const mult = 100 * spot; 
                 const gex = row.gamma * row.oi * mult;
                 const delta = row.delta * row.oi * mult;
-                const theta = row.theta * row.oi * 100; // Theta é por contrato
+                const theta = row.theta * row.oi * 100; 
                 const vega = row.vega * row.oi * 100;
 
                 const isCall = row.tipo.includes('c');
                 strikeMap[row.strike].totalGex += isCall ? gex : -gex;
-                strikeMap[row.strike].totalDelta += isCall ? delta : delta; // Delta de Put já costuma ser negativo
+                strikeMap[row.strike].totalDelta += isCall ? delta : delta; 
                 strikeMap[row.strike].totalTheta += isCall ? theta : theta;
                 strikeMap[row.strike].totalVega += vega;
                 
@@ -244,7 +246,6 @@
                 avgDte: df.reduce((a, b) => a + b.dte, 0) / df.length
             };
 
-            // Update UI
             document.getElementById('totalVegaValue').innerText = `R$ ${(lv.totalVega/1e3).toFixed(1)}k`;
             document.getElementById('totalThetaValue').innerText = `R$ ${(lv.totalTheta/1e3).toFixed(1)}k`;
             document.getElementById('callWallValue').innerText = `$ ${lv.callWall.toFixed(2)}`;
@@ -252,12 +253,9 @@
             document.getElementById('gammaFlipValue').innerText = `$ ${lv.gammaFlip.toFixed(2)}`;
             document.getElementById('dominantDteValue').innerText = `${lv.avgDte.toFixed(0)}d`;
 
-            // Charm Hedge Logic: Como o Delta muda com o tempo
-            // Dealers Long Gamma tendem a comprar delta conforme o tempo passa
             const charmEst = (lv.totalDelta * 0.05) / lv.avgDte; 
             document.getElementById('charmHedgeValue').innerText = `${(charmEst/1e3).toFixed(1)}k / dia`;
 
-            // Advanced Insights
             let insightHtml = `<div class="space-y-3">`;
             const netGex = df.reduce((a,b) => a + b.totalGex, 0);
             
@@ -274,18 +272,23 @@
             }
             document.getElementById('advancedInsights').innerHTML = insightHtml;
 
-            // Strategy
+            // --- STRATEGY WITH EXAMPLES ---
             let stratHtml = "";
-            if (lv.avgDte < 5) {
-                stratHtml = createStratCard("Gamma Scalp", "Vencimento curto. Opere reversões na Put Wall.", "emerald");
-            } else if (lv.totalVega > 10000) {
-                stratHtml = createStratCard("Vega Short", "Venda de IV alta com DTE de 20-30 dias.", "purple");
+            if (lv.avgDte < 5 && netGex > 0) {
+                stratHtml = createStratCard("Gamma Scalp (0DTE/Curto)", "Preço 'preso' perto do Pin. Dealers estabilizam o preço.", "emerald", 
+                `Exemplo: Venda de Straddle ATM ou Butterfly no Strike ${spot.toFixed(0)} para capturar decaimento rápido.`);
+            } else if (lv.totalVega > 10000 && netGex > 0) {
+                stratHtml = createStratCard("Vega Short (Income)", "IV alta em regime de GEX positivo favorece venda de vol.", "purple",
+                `Exemplo: Iron Condor vendendo nos strikes ${lv.putWall.toFixed(0)} e ${lv.callWall.toFixed(0)} para coletar prêmio lateral.`);
+            } else if (netGex < 0) {
+                stratHtml = createStratCard("Long Convexity (Proteção)", "Risco de aceleração em quedas (Negative GEX).", "red",
+                `Exemplo: Backspread de Puts (compra 2, vende 1) no strike ${lv.putWall.toFixed(0)} para lucrar com explosão de vol.`);
             } else {
-                stratHtml = createStratCard("Bull/Bear Spread", "Estratégia direcional focada no Gamma Flip.", "blue");
+                stratHtml = createStratCard("Direcional / Flip", "Aposta na superação do ponto de equilíbrio do mercado.", "blue",
+                `Exemplo: Bull Call Spread (Trava de Alta) saindo do strike ${lv.gammaFlip.toFixed(0)} visando a Call Wall em ${lv.callWall.toFixed(0)}.`);
             }
             document.getElementById('tacticContent').innerHTML = stratHtml;
 
-            // Table
             document.getElementById('dataTable').innerHTML = df.map(r => `
                 <tr class="hover:bg-white/5">
                     <td class="p-4 font-bold text-slate-300">${r.strike.toFixed(2)}</td>
@@ -301,10 +304,13 @@
             renderChart(df, spot);
         }
 
-        function createStratCard(title, desc, color) {
+        function createStratCard(title, desc, color, example) {
             return `<div class="p-3 bg-${color}-500/10 rounded border border-${color}-500/30">
                 <p class="text-[11px] text-${color}-400 font-bold uppercase">${title}</p>
-                <p class="text-[10px] text-slate-300 leading-tight mt-1">${desc}</p>
+                <p class="text-[10px] text-slate-300 leading-tight mt-1 mb-2">${desc}</p>
+                <div class="pt-2 border-t border-${color}-500/20">
+                    <p class="text-[9px] text-${color}-200/70 italic font-mono">${example}</p>
+                </div>
             </div>`;
         }
 
