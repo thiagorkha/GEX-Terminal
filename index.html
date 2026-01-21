@@ -39,6 +39,17 @@
             font-weight: 700;
             letter-spacing: 0.05em;
         }
+        .input-dark {
+            background: transparent;
+            font-weight: bold;
+            width: 100%;
+            text-align: center;
+            outline: none;
+            color: white;
+        }
+        .input-dark:focus {
+            color: #60a5fa;
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -47,14 +58,24 @@
         <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <div>
                 <h1 class="text-3xl font-bold text-blue-400 flex items-center gap-2">
-                    📊 QuantGEX Terminal <span class="text-xs font-mono bg-blue-500/20 px-2 py-1 rounded text-blue-300">v4.5 FULL GREEKS</span>
+                    📊 QuantGEX Terminal <span class="text-xs font-mono bg-blue-500/20 px-2 py-1 rounded text-blue-300">v4.6 PRO</span>
                 </h1>
-                <p class="text-slate-400">Análise de Fluxo Profissional: Delta, Gamma, Theta, Vega & Charm</p>
+                <p class="text-slate-400">Fluxo Profissional: Delta, Gamma, Theta, Vega & IV Rank</p>
             </div>
-            <div class="flex gap-4">
-                <div class="glass-card p-3 rounded-lg text-center min-w-[140px]">
+            
+            <!-- Inputs Superiores -->
+            <div class="flex flex-wrap gap-3 justify-center">
+                <div class="glass-card p-2 rounded-lg text-center min-w-[100px]">
                     <span class="metric-label">Preço Spot</span>
-                    <input type="number" id="spotPrice" value="100.00" step="0.01" class="bg-transparent text-lg font-bold w-full text-center outline-none text-white focus:text-blue-400">
+                    <input type="number" id="spotPrice" value="100.00" step="0.01" class="input-dark text-lg">
+                </div>
+                <div class="glass-card p-2 rounded-lg text-center min-w-[100px]">
+                    <span class="metric-label">Call IV Rank</span>
+                    <input type="number" id="callIvRank" value="50" class="input-dark text-lg">
+                </div>
+                <div class="glass-card p-2 rounded-lg text-center min-w-[100px]">
+                    <span class="metric-label">Put IV Rank</span>
+                    <input type="number" id="putIvRank" value="50" class="input-dark text-lg">
                 </div>
             </div>
         </header>
@@ -66,37 +87,43 @@
                 <input type="file" id="excelInput" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-slate-400">
             </div>
             <div class="glass-card p-6 rounded-xl flex flex-col justify-center border-l-4 border-purple-500">
-                <span class="metric-label">Exposição Vega Total</span>
-                <div id="totalVegaValue" class="text-xl font-bold text-purple-400 mt-1">--</div>
-                <div class="text-[9px] text-slate-500 mt-1">Risco financeiro por +1% IV</div>
+                <span class="metric-label">GEX Total (Notional)</span>
+                <div id="totalGexValue" class="text-xl font-bold text-white mt-1">--</div>
+                <div id="gexStatus" class="text-[9px] uppercase font-bold mt-1">Aguardando dados...</div>
             </div>
         </div>
 
-        <!-- Secondary Metrics Row -->
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
-            <div class="glass-card p-4 rounded-xl border-t-2 border-emerald-500">
-                <span class="metric-label">Theta Total (Net)</span>
-                <div id="totalThetaValue" class="text-lg font-bold text-emerald-400">--</div>
-            </div>
-            <div class="glass-card p-4 rounded-xl border-t-2 border-orange-500">
-                <span class="metric-label">Gamma Flip</span>
-                <div id="gammaFlipValue" class="text-lg font-bold text-orange-400">--</div>
-            </div>
-            <div class="glass-card p-4 rounded-xl border-t-2 border-blue-500">
-                <span class="metric-label">Hedge de Charm</span>
-                <div id="charmHedgeValue" class="text-lg font-bold text-blue-400">--</div>
+        <!-- Metric Cards Row -->
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8 text-center">
+            <div class="glass-card p-4 rounded-xl border-t-2 border-green-500">
+                <span class="metric-label">Call Wall</span>
+                <div id="callWallValue" class="text-lg font-bold text-green-400">--</div>
+                <div id="callWallVolume" class="text-[9px] text-slate-500 font-mono mt-1">--</div>
             </div>
             <div class="glass-card p-4 rounded-xl border-t-2 border-red-500">
                 <span class="metric-label">Put Wall</span>
                 <div id="putWallValue" class="text-lg font-bold text-red-400">--</div>
+                <div id="putWallVolume" class="text-[9px] text-slate-500 font-mono mt-1">--</div>
             </div>
-             <div class="glass-card p-4 rounded-xl border-t-2 border-green-500">
-                <span class="metric-label">Call Wall</span>
-                <div id="callWallValue" class="text-lg font-bold text-green-400">--</div>
+            <div class="glass-card p-4 rounded-xl border-t-2 border-yellow-500">
+                <span class="metric-label">Gamma Pin</span>
+                <div id="gammaPinValue" class="text-lg font-bold text-yellow-400">--</div>
+                <div class="text-[9px] text-slate-500 mt-1 uppercase">Ponto de Estabilidade</div>
             </div>
-            <div class="glass-card p-4 rounded-xl border-t-2 border-cyan-500">
-                <span class="metric-label">DTE Dominante</span>
-                <div id="dominantDteValue" class="text-lg font-bold text-cyan-400">--</div>
+            <div class="glass-card p-4 rounded-xl border-t-2 border-orange-500">
+                <span class="metric-label">Gamma Flip</span>
+                <div id="gammaFlipValue" class="text-lg font-bold text-orange-400">--</div>
+                <div class="text-[9px] text-slate-500 mt-1 uppercase">Ponto de Inversão</div>
+            </div>
+            <div class="glass-card p-4 rounded-xl border-t-2 border-emerald-500">
+                <span class="metric-label">Theta Total</span>
+                <div id="totalThetaValue" class="text-lg font-bold text-emerald-400">--</div>
+                <div class="text-[9px] text-slate-500 mt-1 uppercase">Decaimento/Dia</div>
+            </div>
+            <div class="glass-card p-4 rounded-xl border-t-2 border-blue-500">
+                <span class="metric-label">Charm Hedge</span>
+                <div id="charmHedgeValue" class="text-lg font-bold text-blue-400">--</div>
+                <div class="text-[9px] text-slate-500 mt-1 uppercase">Hedge Temporal</div>
             </div>
         </div>
 
@@ -104,7 +131,7 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div class="lg:col-span-2 glass-card p-6 rounded-xl">
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Exposição de Gregas por Strike</h3>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Visualização de Gregas</h3>
                     <select id="chartMetric" class="bg-slate-800 text-[10px] rounded px-2 py-1 outline-none border border-slate-700">
                         <option value="totalGex">Gamma Exposure (GEX)</option>
                         <option value="totalVega">Vega Exposure</option>
@@ -120,18 +147,16 @@
             <div class="space-y-6">
                 <!-- Advanced Risk Logic -->
                 <div class="glass-card p-6 rounded-xl border-b-4 border-yellow-600">
-                    <h3 class="text-sm font-bold text-yellow-300 uppercase mb-4">⚡ Monitor de Liquidez & Charm</h3>
+                    <h3 class="text-sm font-bold text-yellow-300 uppercase mb-4">⚡ Monitor de Liquidez</h3>
                     <div id="advancedInsights" class="space-y-4">
-                        <p class="text-slate-500 text-[11px] italic text-center">Aguardando processamento de gregas...</p>
+                        <p class="text-slate-500 text-[11px] italic text-center">Importe dados para análise.</p>
                     </div>
                 </div>
 
                 <!-- Strategic Tactics -->
                 <div class="glass-card p-6 rounded-xl border-b-4 border-cyan-600">
                     <h3 class="text-sm font-bold text-cyan-300 uppercase mb-4">🎯 Estratégia Recomendada</h3>
-                    <div id="tacticContent" class="space-y-3">
-                        <p class="text-slate-500 text-[11px] italic text-center">Importe dados para ver sugestões.</p>
-                    </div>
+                    <div id="tacticContent" class="space-y-3"></div>
                 </div>
             </div>
         </div>
@@ -161,8 +186,10 @@
         let chartInstance = null;
         let lastRawData = [];
 
-        document.getElementById('spotPrice').addEventListener('change', updateData);
-        document.getElementById('chartMetric').addEventListener('change', updateData);
+        // UI Event Listeners
+        ['spotPrice', 'callIvRank', 'putIvRank', 'chartMetric'].forEach(id => {
+            document.getElementById(id).addEventListener('change', updateData);
+        });
 
         document.getElementById('excelInput').addEventListener('change', function(e) {
             const file = e.target.files[0];
@@ -213,22 +240,23 @@
 
             lastRawData.forEach(row => {
                 if (!strikeMap[row.strike]) {
-                    strikeMap[row.strike] = { strike: row.strike, totalGex: 0, totalDelta: 0, totalTheta: 0, totalVega: 0, iv: row.iv, dte: row.dte, gCall: 0, gPut: 0 };
+                    strikeMap[row.strike] = { strike: row.strike, totalGex: 0, totalDelta: 0, totalTheta: 0, totalVega: 0, iv: row.iv, dte: row.dte, gCall: 0, gPut: 0, absGamma: 0 };
                 }
                 const mult = 100 * spot; 
-                const gex = row.gamma * row.oi * mult;
+                const gexValue = row.gamma * row.oi * mult;
                 const delta = row.delta * row.oi * mult;
                 const theta = row.theta * row.oi * 100; 
                 const vega = row.vega * row.oi * 100;
 
                 const isCall = row.tipo.includes('c');
-                strikeMap[row.strike].totalGex += isCall ? gex : -gex;
-                strikeMap[row.strike].totalDelta += isCall ? delta : delta; 
-                strikeMap[row.strike].totalTheta += isCall ? theta : theta;
+                strikeMap[row.strike].totalGex += isCall ? gexValue : -gexValue;
+                strikeMap[row.strike].totalDelta += delta; 
+                strikeMap[row.strike].totalTheta += theta;
                 strikeMap[row.strike].totalVega += vega;
+                strikeMap[row.strike].absGamma += Math.abs(gexValue);
                 
-                if(isCall) strikeMap[row.strike].gCall += gex;
-                else strikeMap[row.strike].gPut -= gex;
+                if(isCall) strikeMap[row.strike].gCall += gexValue;
+                else strikeMap[row.strike].gPut -= gexValue;
             });
 
             const df = Object.values(strikeMap).sort((a,b) => a.strike - b.strike);
@@ -236,63 +264,85 @@
         }
 
         function renderDashboard(df, spot) {
+            const callRank = parseFloat(document.getElementById('callIvRank').value);
+            const putRank = parseFloat(document.getElementById('putIvRank').value);
+
             const lv = {
-                callWall: df.reduce((a, b) => a.gCall > b.gCall ? a : b).strike,
-                putWall: df.reduce((a, b) => a.gPut < b.gPut ? a : b).strike,
+                callWall: df.reduce((a, b) => a.gCall > b.gCall ? a : b),
+                putWall: df.reduce((a, b) => a.gPut < b.gPut ? a : b),
+                gammaPin: df.reduce((a, b) => a.absGamma > b.absGamma ? a : b).strike,
                 gammaFlip: df.reduce((a, b) => Math.abs(a.totalGex) < Math.abs(b.totalGex) ? a : b).strike,
                 totalVega: df.reduce((a, b) => a + b.totalVega, 0),
                 totalTheta: df.reduce((a, b) => a + b.totalTheta, 0),
                 totalDelta: df.reduce((a, b) => a + b.totalDelta, 0),
+                totalGexNet: df.reduce((a, b) => a + b.totalGex, 0),
                 avgDte: df.reduce((a, b) => a + b.dte, 0) / df.length
             };
 
-            document.getElementById('totalVegaValue').innerText = `R$ ${(lv.totalVega/1e3).toFixed(1)}k`;
-            document.getElementById('totalThetaValue').innerText = `R$ ${(lv.totalTheta/1e3).toFixed(1)}k`;
-            document.getElementById('callWallValue').innerText = `$ ${lv.callWall.toFixed(2)}`;
-            document.getElementById('putWallValue').innerText = `$ ${lv.putWall.toFixed(2)}`;
-            document.getElementById('gammaFlipValue').innerText = `$ ${lv.gammaFlip.toFixed(2)}`;
-            document.getElementById('dominantDteValue').innerText = `${lv.avgDte.toFixed(0)}d`;
+            // Notional GEX Info
+            const gexEl = document.getElementById('totalGexValue');
+            const gexStatusEl = document.getElementById('gexStatus');
+            gexEl.innerText = `R$ ${(lv.totalGexNet/1e6).toFixed(1)}M`;
+            if(lv.totalGexNet > 0) {
+                gexEl.className = "text-xl font-bold text-green-400 mt-1";
+                gexStatusEl.innerText = "Dealers Long Gamma (Estável)";
+                gexStatusEl.className = "text-[9px] uppercase font-bold mt-1 text-green-500/80";
+            } else {
+                gexEl.className = "text-xl font-bold text-red-400 mt-1";
+                gexStatusEl.innerText = "Dealers Short Gamma (Explosivo)";
+                gexStatusEl.className = "text-[9px] uppercase font-bold mt-1 text-red-500/80";
+            }
 
+            // Metric Cards
+            document.getElementById('callWallValue').innerText = `$ ${lv.callWall.strike.toFixed(2)}`;
+            document.getElementById('callWallVolume').innerText = `${(lv.callWall.gCall/1e6).toFixed(1)}M`;
+            document.getElementById('putWallValue').innerText = `$ ${lv.putWall.strike.toFixed(2)}`;
+            document.getElementById('putWallVolume').innerText = `${(lv.putWall.gPut/1e6).toFixed(1)}M`;
+            document.getElementById('gammaPinValue').innerText = `$ ${lv.gammaPin.toFixed(2)}`;
+            document.getElementById('gammaFlipValue').innerText = `$ ${lv.gammaFlip.toFixed(2)}`;
+            document.getElementById('totalThetaValue').innerText = `R$ ${(lv.totalTheta/1e3).toFixed(1)}k`;
+            
             const charmEst = (lv.totalDelta * 0.05) / lv.avgDte; 
             document.getElementById('charmHedgeValue').innerText = `${(charmEst/1e3).toFixed(1)}k / dia`;
 
+            // Insights
             let insightHtml = `<div class="space-y-3">`;
-            const netGex = df.reduce((a,b) => a + b.totalGex, 0);
-            
-            if (netGex < 0) {
-                insightHtml += `<div class="p-3 bg-red-500/10 border border-red-500/20 rounded">
-                    <p class="text-[10px] text-red-400 font-bold uppercase">ALERTA: VOLATILITY SQUEEZE</p>
-                    <p class="text-[10px] text-slate-400 mt-1">Regime de GEX Negativo. Com Vega de ${ (lv.totalVega/1e3).toFixed(1) }k, um aumento de 1% na IV forçará os dealers a venderem deltas agressivamente.</p>
+            if (callRank > 70 || putRank > 70) {
+                insightHtml += `<div class="p-3 bg-purple-500/10 border border-purple-500/20 rounded">
+                    <p class="text-[10px] text-purple-400 font-bold uppercase">IV RANK ALTO (${Math.max(callRank, putRank)})</p>
+                    <p class="text-[10px] text-slate-400 mt-1">Prêmios caros. O mercado precifica movimento iminente. Estratégias vendedoras de vol têm edge estatístico aqui.</p>
                 </div>`;
-            } else {
-                insightHtml += `<div class="p-3 bg-green-500/10 border border-green-500/20 rounded">
-                    <p class="text-[10px] text-green-400 font-bold uppercase">REGIME: STICKY PRICE</p>
-                    <p class="text-[10px] text-slate-400 mt-1">Dealers estão coletando R$ ${ (lv.totalTheta/1e3).toFixed(1) }k de Theta por dia. Eles defenderão as Walls para manter o preço lateral.</p>
+            }
+            if (lv.totalGexNet < 0) {
+                insightHtml += `<div class="p-3 bg-red-500/10 border border-red-500/20 rounded">
+                    <p class="text-[10px] text-red-400 font-bold uppercase">ALERTA: GAMMA SQUEEZE</p>
+                    <p class="text-[10px] text-slate-400 mt-1">GEX negativo. Dealers precisam vender conforme cai e comprar conforme sobe, acelerando a volatilidade realizada.</p>
                 </div>`;
             }
             document.getElementById('advancedInsights').innerHTML = insightHtml;
 
-            // --- STRATEGY WITH EXAMPLES ---
+            // Strategy Tactic
             let stratHtml = "";
-            if (lv.avgDte < 5 && netGex > 0) {
-                stratHtml = createStratCard("Gamma Scalp (0DTE/Curto)", "Preço 'preso' perto do Pin. Dealers estabilizam o preço.", "emerald", 
-                `Exemplo: Venda de Straddle ATM ou Butterfly no Strike ${spot.toFixed(0)} para capturar decaimento rápido.`);
-            } else if (lv.totalVega > 10000 && netGex > 0) {
-                stratHtml = createStratCard("Vega Short (Income)", "IV alta em regime de GEX positivo favorece venda de vol.", "purple",
-                `Exemplo: Iron Condor vendendo nos strikes ${lv.putWall.toFixed(0)} e ${lv.callWall.toFixed(0)} para coletar prêmio lateral.`);
-            } else if (netGex < 0) {
-                stratHtml = createStratCard("Long Convexity (Proteção)", "Risco de aceleração em quedas (Negative GEX).", "red",
-                `Exemplo: Backspread de Puts (compra 2, vende 1) no strike ${lv.putWall.toFixed(0)} para lucrar com explosão de vol.`);
+            if (lv.avgDte < 5) {
+                stratHtml = createStratCard("Pinning Strategy", "Vencimento curto + Gamma Pin. O preço tende a orbitar o Pin.", "yellow", 
+                `Exemplo: Iron Butterfly no strike ${lv.gammaPin.toFixed(0)} para lucrar com a imobilização do preço.`);
+            } else if (callRank > 80 && putRank > 80) {
+                stratHtml = createStratCard("Short Volatility", "IV Rank extremo favorece coleta de prêmios.", "purple",
+                `Exemplo: Venda de Strangle (distante das Walls) nos strikes ${lv.putWall.strike.toFixed(0)} e ${lv.callWall.strike.toFixed(0)}.`);
+            } else if (lv.totalGexNet < 0) {
+                stratHtml = createStratCard("Long Gamma / Convexity", "Comprar vol barata antes da explosão.", "red",
+                `Exemplo: Compra de Straddle no strike ${lv.gammaFlip.toFixed(0)} visando lucrar com o aumento da vol realizada.`);
             } else {
-                stratHtml = createStratCard("Direcional / Flip", "Aposta na superação do ponto de equilíbrio do mercado.", "blue",
-                `Exemplo: Bull Call Spread (Trava de Alta) saindo do strike ${lv.gammaFlip.toFixed(0)} visando a Call Wall em ${lv.callWall.toFixed(0)}.`);
+                stratHtml = createStratCard("Trend Following", "GEX positivo providencia suporte/resistência nas Walls.", "blue",
+                `Exemplo: Trava de Alta (Bull Call Spread) buscando o alvo na Call Wall em ${lv.callWall.strike.toFixed(0)}.`);
             }
             document.getElementById('tacticContent').innerHTML = stratHtml;
 
+            // Table
             document.getElementById('dataTable').innerHTML = df.map(r => `
                 <tr class="hover:bg-white/5">
                     <td class="p-4 font-bold text-slate-300">${r.strike.toFixed(2)}</td>
-                    <td class="p-4 ${r.totalGex >= 0 ? 'text-green-400' : 'text-red-400'}">${(r.totalGex/1e3).toFixed(1)}k</td>
+                    <td class="p-4 ${r.totalGex >= 0 ? 'text-green-400' : 'text-red-400'}">${(r.totalGex/1e6).toFixed(2)}M</td>
                     <td class="p-4 text-yellow-500">${(r.totalDelta/1e6).toFixed(2)}M</td>
                     <td class="p-4 text-emerald-400">${(r.totalTheta/1e3).toFixed(1)}k</td>
                     <td class="p-4 text-purple-400">${(r.totalVega/1e3).toFixed(1)}k</td>
